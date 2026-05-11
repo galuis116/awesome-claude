@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "kind": "registry-manifest",
   "generatedAt": "2026-05-09T00:00:00.000Z",
-  "totalEntries": 383,
+  "totalEntries": 384,
   "categoryOrder": [
     "agents",
     "mcp",
@@ -21,7 +21,7 @@
       "label": "Agents"
     },
     "mcp": {
-      "count": 47,
+      "count": 48,
       "label": "MCP Servers"
     },
     "tools": {
@@ -1883,6 +1883,14 @@
       "apiUrl": "https://heyclau.de/api/registry/entries/skills/mcp-tool-contract-testing"
     },
     {
+      "key": "mcp:memesio-mcp-server",
+      "category": "mcp",
+      "slug": "memesio-mcp-server",
+      "canonicalUrl": "https://heyclau.de/mcp/memesio-mcp-server",
+      "llmsUrl": "https://heyclau.de/data/llms/mcp/memesio-mcp-server.txt",
+      "apiUrl": "https://heyclau.de/api/registry/entries/mcp/memesio-mcp-server"
+    },
+    {
       "key": "hooks:memory-usage-monitor",
       "category": "hooks",
       "slug": "memory-usage-monitor",
@@ -3132,20 +3140,20 @@
     "duplicateBodyGroupCount": 0
   },
   "trustSummary": {
-    "brandedCount": 140,
+    "brandedCount": 141,
     "brandedPercent": 37,
-    "brandfetchCount": 138,
-    "sourceAvailableCount": 383,
+    "brandfetchCount": 139,
+    "sourceAvailableCount": 384,
     "sourceAvailablePercent": 100,
     "missingSourceCount": 0,
     "checksumPresentCount": 109,
     "checksumPresentPercent": 28,
     "adapterGeneratedCount": 68,
-    "recentlyVerifiedCount": 357,
+    "recentlyVerifiedCount": 358,
     "staleVerificationCount": 0,
-    "provenanceCount": 5,
-    "provenancePercent": 1,
-    "claimedOrReviewedCount": 4,
+    "provenanceCount": 6,
+    "provenancePercent": 2,
+    "claimedOrReviewedCount": 5,
     "recommendedFixCount": 1,
     "entriesNeedingAttention": 1
   },
@@ -3175,47 +3183,47 @@
     "directory-index.json": {
       "path": "/data/directory-index.json",
       "type": "json",
-      "sha256": "9ec40d46da2d5292b5efc3f0ee9cd991fc7ccd171e6970a63760186ddf4b9680"
+      "sha256": "69b7862438807839fb8924bcb3dcca23e2f4b65d966bae2552cd07be26191e01"
     },
     "search-index.json": {
       "path": "/data/search-index.json",
       "type": "json",
-      "sha256": "dd9c44f64930bfe3ad6cfe821b303dc0749e2edd1c20acb5cd6d7338298f18e3"
+      "sha256": "4d57e4aae1f1fa7316f235c6bbc43f52227acd393b7aaa724db7e1b459218555"
     },
     "raycast-index.json": {
       "path": "/data/raycast-index.json",
       "type": "json",
-      "sha256": "7eb0c7471137566efc21c5f811c8f5bb3a410dd0a89f3efe9d18c6e357f59272"
+      "sha256": "5c917e6c7ec786449d4e93c0efb15f1f1a01051b1d2c6bf99cd36e5f95764415"
     },
     "ecosystem-feed.json": {
       "path": "/data/ecosystem-feed.json",
       "type": "json",
-      "sha256": "ef924e1484f96564f15cbb0c756175bd06d7e725820921bf65b7264dd621ce77"
+      "sha256": "4aedfe64b25b8e18bc6d9752b5977a591805733151403c18c8d729faf14abd3d"
     },
     "mcp-registry-feed.json": {
       "path": "/data/mcp-registry-feed.json",
       "type": "json",
-      "sha256": "661867c3fc717e54c84abe661261714c4619481d156999919383dd5c8faa0db0"
+      "sha256": "7926c9910f678bfa40472647c086108c3c91df693cf76030c0907aee75b86b02"
     },
     "plugin-export-feed.json": {
       "path": "/data/plugin-export-feed.json",
       "type": "json",
-      "sha256": "6e56c3446ddc77376000dfc355dc1b14a17d8ef3063d8b6bf4dc36d89c516085"
+      "sha256": "a7e5c77c0646897022e98b95457a9e4579810df81fdf4312ae583dd0359d93c1"
     },
     "registry-changelog.json": {
       "path": "/data/registry-changelog.json",
       "type": "json",
-      "sha256": "e3536ea3ae158bc121c3168baf8713ea3cfc4fc3f81901ef29a5715445386258"
+      "sha256": "beb1a6bfeb3faea8517b81118fafb0980aa24527a77a1611dfe118145e912676"
     },
     "registry-trust-report.json": {
       "path": "/data/registry-trust-report.json",
       "type": "json",
-      "sha256": "31855b50d64fa6645601517a19e0c6381de7e64a52be2b8e28a2f951537bdb8f"
+      "sha256": "1eb23cfacd485bfd52d16c5afaf2ed840710dfd58d34a6610205519af1b0df4d"
     },
     "feeds/index.json": {
       "path": "/data/feeds%2Findex.json",
       "type": "json",
-      "sha256": "629ce74708edb97fcbb86d1ac937fbdb3e640fb44549487edbffe03c7b0d6779"
+      "sha256": "48e5227ec89798561d18b8c3542e493fd1df0b0a659db214abd054301f5d0041"
     },
     "submission-spec.json": {
       "path": "/data/submission-spec.json",
@@ -3225,7 +3233,7 @@
     "content-quality-report.json": {
       "path": "/data/content-quality-report.json",
       "type": "json",
-      "sha256": "02d3dbf5229cd0d38e62b0e2ea9134aa5c382dc69ac2afbaa4f33d336c537c6e"
+      "sha256": "e14c8013975295d104f3a3d87b6cfeff2b0b65ae79fc6f3b2d298c0374d9fb37"
     },
     "content-quality-prompts.json": {
       "path": "/data/content-quality-prompts.json",
@@ -3235,12 +3243,12 @@
     "jsonld-snapshots.json": {
       "path": "/data/jsonld-snapshots.json",
       "type": "json",
-      "sha256": "27b31b5858eae8fb5d798b264007429a8fe7e3a0514950d7df4b9f81b5e649cb"
+      "sha256": "8379b9704a68d8cf7ad49dbc5dbfa4af65be2ad311fd67cb1f9aa2ae4e8e3907"
     },
     "llms-full.txt": {
       "path": "/data/llms-full.txt",
       "type": "text",
-      "sha256": "3f383145ae198ff5de0a31f17587316f3713c20cc304f9e6ad261880830063d4"
+      "sha256": "4cd166d23db6a9b6f2ac2988a2fdd5d151293226440681c8b4404cf12dde5c42"
     },
     "entries/commands/cursor-rules.json": {
       "path": "/data/entries%2Fcommands%2Fcursor-rules.json",
@@ -6842,6 +6850,21 @@
       "type": "text",
       "sha256": "57d1db642abf05d652f9c384188d588be6cab558c1cb78d035586daaec465bce"
     },
+    "entries/mcp/memesio-mcp-server.json": {
+      "path": "/data/entries%2Fmcp%2Fmemesio-mcp-server.json",
+      "type": "json",
+      "sha256": "f817863642212239a75748541d0669635de5a581f52d59ea1bf579e46e2fb657"
+    },
+    "llms/mcp/memesio-mcp-server.txt": {
+      "path": "/data/llms%2Fmcp%2Fmemesio-mcp-server.txt",
+      "type": "text",
+      "sha256": "10977606923978d0ed37a87d9f410437547acbafa0b17bc30fe7ce2868221f26"
+    },
+    "raycast/mcp/memesio-mcp-server.json": {
+      "path": "/data/raycast%2Fmcp%2Fmemesio-mcp-server.json",
+      "type": "json",
+      "sha256": "d9456e0428fe6561a7eca68c7fe82034fd57fedd503eb5fea09430d3f363d7fc"
+    },
     "entries/hooks/memory-usage-monitor.json": {
       "path": "/data/entries%2Fhooks%2Fmemory-usage-monitor.json",
       "type": "json",
@@ -9335,7 +9358,7 @@
     "feeds/categories/mcp.json": {
       "path": "/data/feeds%2Fcategories%2Fmcp.json",
       "type": "json",
-      "sha256": "5a9c382cfde1180051b219144bae5fe187a98593eb8513fe0fa1a9db60d4e781"
+      "sha256": "6e0cb6f5cd4ca2e67b23f7ee9e59f76e6fc5bd13fe6579c987bfaad5dc31a44b"
     },
     "feeds/categories/tools.json": {
       "path": "/data/feeds%2Fcategories%2Ftools.json",
