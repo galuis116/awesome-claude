@@ -22,9 +22,9 @@ describe("searchDuplicateEntries source-URL matching", () => {
       sourceUrl: "https://github.com/domdomegg/airtable-mcp-server/",
     });
     expect(result.count).toBe(1);
-    expect((result.matches as Array<{ reasons: string[] }>)[0].reasons).toContain(
-      "source_url",
-    );
+    expect(
+      (result.matches as Array<{ reasons: string[] }>)[0].reasons,
+    ).toContain("source_url");
   });
 
   it("matches a www-prefix + uppercase-host variant", () => {
@@ -151,9 +151,9 @@ describe("searchDuplicateEntries source-URL matching", () => {
       },
     );
     expect(result.count).toBe(1);
-    expect((result.matches as Array<{ reasons: string[] }>)[0].reasons).toContain(
-      "source_url",
-    );
+    expect(
+      (result.matches as Array<{ reasons: string[] }>)[0].reasons,
+    ).toContain("source_url");
   });
 
   it("checks every advertised fielded URL arg against its matching entry field", () => {
