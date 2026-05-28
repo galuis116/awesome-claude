@@ -132,17 +132,93 @@ describe("searchDuplicateEntries source-URL matching", () => {
     expect(result.count).toBe(1);
   });
 
-  it("accepts the fielded `githubUrl` / `docsUrl` / `downloadUrl` / `websiteUrl` args", () => {
-    const githubResult = searchDuplicateEntries([entry()], {
-      githubUrl: "https://github.com/domdomegg/airtable-mcp-server",
-    });
+  it("normalizes a trailing slash that sits before a surviving query string", () => {
+    // `?ref=x` is a non-tracking param, so it is kept. The trailing slash on the
+    // path must still be stripped (it sits before the `?`, so it is never the
+    // last character of the serialized URL). Without pathname-level
+    // normalization this would serialize as `.../airtable-mcp-server/?ref=x` and
+    // fail to match the canonical entry URL.
+    const result = searchDuplicateEntries(
+      [
+        entry({
+          documentationUrl:
+            "https://github.com/domdomegg/airtable-mcp-server?ref=x",
+          repoUrl: "https://github.com/domdomegg/airtable-mcp-server?ref=x",
+        }),
+      ],
+      {
+        sourceUrl: "https://github.com/domdomegg/airtable-mcp-server/?ref=x",
+      },
+    );
+    expect(result.count).toBe(1);
+    expect((result.matches as Array<{ reasons: string[] }>)[0].reasons).toContain(
+      "source_url",
+    );
+  });
+
+  it("checks every advertised fielded URL arg against its matching entry field", () => {
+    // Each fielded submission arg must be matched against the corresponding
+    // indexed entry field — the previous test only proved `githubUrl`/`docsUrl`.
+    // Trailing-slash variants are used so each case also exercises path
+    // normalization, not just exact equality.
+    const githubResult = searchDuplicateEntries(
+      [
+        entry({
+          documentationUrl: "",
+          repoUrl: "",
+          githubUrl: "https://github.com/domdomegg/airtable-mcp-server",
+        }),
+      ],
+      { githubUrl: "https://github.com/domdomegg/airtable-mcp-server/" },
+    );
     expect(githubResult.count).toBe(1);
+    expect(
+      (githubResult.matches as Array<{ reasons: string[] }>)[0].reasons,
+    ).toContain("source_url");
 
     const docsResult = searchDuplicateEntries(
-      [entry({ documentationUrl: "https://docs.example.com/airtable" })],
+      [
+        entry({
+          documentationUrl: "https://docs.example.com/airtable",
+          repoUrl: "",
+        }),
+      ],
       { docsUrl: "https://docs.example.com/airtable/" },
     );
     expect(docsResult.count).toBe(1);
+    expect(
+      (docsResult.matches as Array<{ reasons: string[] }>)[0].reasons,
+    ).toContain("source_url");
+
+    const downloadResult = searchDuplicateEntries(
+      [
+        entry({
+          documentationUrl: "",
+          repoUrl: "",
+          downloadUrl: "https://example.com/downloads/airtable.zip",
+        }),
+      ],
+      { downloadUrl: "https://example.com/downloads/airtable.zip/" },
+    );
+    expect(downloadResult.count).toBe(1);
+    expect(
+      (downloadResult.matches as Array<{ reasons: string[] }>)[0].reasons,
+    ).toContain("source_url");
+
+    const websiteResult = searchDuplicateEntries(
+      [
+        entry({
+          documentationUrl: "",
+          repoUrl: "",
+          websiteUrl: "https://airtable-mcp.example",
+        }),
+      ],
+      { websiteUrl: "https://www.airtable-mcp.example/" },
+    );
+    expect(websiteResult.count).toBe(1);
+    expect(
+      (websiteResult.matches as Array<{ reasons: string[] }>)[0].reasons,
+    ).toContain("source_url");
   });
 
   it("returns count: 0 when no URL candidates are supplied", () => {

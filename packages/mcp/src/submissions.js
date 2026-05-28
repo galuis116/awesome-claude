@@ -827,13 +827,16 @@ function normalizeSubmissionUrlForMatch(value) {
     if (isTrackingQueryKey(key)) droppedKeys.push(key);
   }
   for (const key of droppedKeys) url.searchParams.delete(key);
-  let normalized = url.toString();
-  // URL.toString() preserves the trailing slash; strip it on non-root paths so
-  // `https://github.com/foo/bar/` matches `https://github.com/foo/bar`.
-  if (url.pathname !== "/" && normalized.endsWith("/")) {
-    normalized = normalized.slice(0, -1);
+  // Normalize the pathname before serializing so a trailing `/` is stripped on
+  // non-root paths regardless of any query string. Checking the serialized
+  // string's `endsWith("/")` misses cases like
+  // `https://example.com/foo/?ref=x`, where the slash sits before the query and
+  // is never the last character — leaving it would break the match against the
+  // canonical `https://example.com/foo?ref=x`.
+  if (url.pathname !== "/" && url.pathname.endsWith("/")) {
+    url.pathname = url.pathname.slice(0, -1);
   }
-  return normalized;
+  return url.toString();
 }
 
 // Every external-publisher URL field the indexed entry may carry. Includes
