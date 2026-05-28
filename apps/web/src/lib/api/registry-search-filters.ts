@@ -37,9 +37,18 @@ export type RegistrySearchFilterDimension =
   | "claimStatus"
   | "sourceStatus";
 
-export function matchesQuery(entry: SearchDocument, query: string) {
-  if (!query) return true;
-  const haystack = [
+const TOKEN_SPLIT_PATTERN = /[^a-z0-9+#.-]+/i;
+
+function tokenizeSearchQuery(query: string) {
+  return query
+    .split(TOKEN_SPLIT_PATTERN)
+    .map((token) => token.trim().toLowerCase())
+    .filter((token) => token.length >= 2)
+    .slice(0, 12);
+}
+
+function normalizedSearchText(entry: SearchDocument) {
+  return [
     entry.category,
     entry.title,
     entry.description,
@@ -55,7 +64,13 @@ export function matchesQuery(entry: SearchDocument, query: string) {
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
-  return haystack.includes(query);
+}
+
+export function matchesQuery(entry: SearchDocument, query: string) {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) return true;
+  const haystack = normalizedSearchText(entry);
+  return haystack.includes(normalizedQuery);
 }
 
 export function matchesPlatform(entry: SearchDocument, platform: string) {
@@ -65,7 +80,10 @@ export function matchesPlatform(entry: SearchDocument, platform: string) {
   );
 }
 
-export function matchesBooleanFilter(value: boolean, filter: BooleanFilterValue) {
+export function matchesBooleanFilter(
+  value: boolean,
+  filter: BooleanFilterValue,
+) {
   if (filter === "all") return true;
   return filter === "true" ? value : !value;
 }
@@ -152,4 +170,110 @@ export function filterEntries(
   filters: RegistrySearchFilterState,
 ) {
   return entries.filter((entry) => entryMatchesFilters(entry, filters));
+}
+
+export type RankedSearchEntry = {
+  entry: SearchDocument;
+  score: number;
+  reasons: string[];
+};
+
+export function scoreSearchEntry(
+  entry: SearchDocument,
+  query: string,
+): Omit<RankedSearchEntry, "entry"> {
+  const normalizedQuery = query.trim().toLowerCase();
+  const tokens = tokenizeSearchQuery(normalizedQuery);
+  if (!tokens.length) return { score: 0, reasons: [] };
+
+  const title = entry.title.toLowerCase();
+  const category = entry.category.toLowerCase();
+  const tags = new Set((entry.tags ?? []).map((tag) => tag.toLowerCase()));
+  const keywords = new Set(
+    (entry.keywords ?? []).map((keyword) => keyword.toLowerCase()),
+  );
+  const haystack = normalizedSearchText(entry);
+  let score = 0;
+  const reasons = new Set<string>();
+
+  if (title.includes(normalizedQuery)) {
+    score += 90;
+    reasons.add("title phrase");
+  }
+  if (category === normalizedQuery) {
+    score += 45;
+    reasons.add("category match");
+  }
+
+  for (const token of tokens) {
+    if (title.includes(token)) {
+      score += 35;
+      reasons.add("title term");
+    }
+    if (tags.has(token)) {
+      score += 24;
+      reasons.add("tag match");
+    }
+    if (keywords.has(token)) {
+      score += 18;
+      reasons.add("keyword match");
+    }
+    if (category.includes(token)) {
+      score += 12;
+      reasons.add("category term");
+    }
+    if (haystack.includes(token)) {
+      score += 4;
+    }
+  }
+
+  if (entry.trustSignals?.sourceStatus === "available") {
+    score += 8;
+    reasons.add("source-backed");
+  }
+  if (
+    entry.downloadTrust === "first-party" ||
+    entry.trustSignals?.packageVerified === true
+  ) {
+    score += 8;
+    reasons.add("trusted package");
+  }
+  if (hasSafetyNotes(entry)) {
+    score += 4;
+    reasons.add("safety notes");
+  }
+  if (hasPrivacyNotes(entry)) {
+    score += 4;
+    reasons.add("privacy notes");
+  }
+  if (entry.claimStatus === "verified" || entry.reviewedBy) {
+    score += 4;
+    reasons.add("reviewed");
+  }
+
+  return {
+    score,
+    reasons: [...reasons].slice(0, 6),
+  };
+}
+
+export function rankSearchEntries(
+  entries: ReadonlyArray<SearchDocument>,
+  query: string,
+): RankedSearchEntry[] {
+  return entries
+    .map((entry, index) => ({
+      entry,
+      index,
+      ...scoreSearchEntry(entry, query),
+    }))
+    .sort((left, right) => {
+      if (left.score !== right.score) return right.score - left.score;
+      const dateDelta = String(right.entry.dateAdded ?? "").localeCompare(
+        String(left.entry.dateAdded ?? ""),
+      );
+      if (dateDelta !== 0) return dateDelta;
+      return left.index - right.index;
+    })
+    .map(({ entry, score, reasons }) => ({ entry, score, reasons }));
 }
