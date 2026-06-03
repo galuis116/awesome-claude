@@ -663,6 +663,13 @@ function intersection(left = [], right = [], normalize = normalizeText) {
     .filter((value) => rightValues.has(value));
 }
 
+function intersectAll(lists = [], normalize = normalizeText) {
+  if (lists.length === 0) return [];
+  return lists
+    .slice(1)
+    .reduce((acc, list) => intersection(acc, list, normalize), lists[0] || []);
+}
+
 function unique(values = []) {
   return values.filter(
     (value, index, list) => value && list.indexOf(value) === index,
@@ -1338,10 +1345,7 @@ export async function compareEntries(args = {}, options = {}) {
     ok: true,
     platform: platform || "",
     count: compared.length,
-    sharedTags: intersection(
-      compared[0]?.tags || [],
-      compared.slice(1).flatMap((entry) => entry.tags || []),
-    ),
+    sharedTags: intersectAll(compared.map((entry) => entry.tags || [])),
     entries: compared,
     comparisonNotes: [
       "Prefer exact category fit before source popularity.",
