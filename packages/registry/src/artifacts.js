@@ -10,6 +10,10 @@ import {
 import { renderCorpusLlms, renderEntryLlms } from "./llms.js";
 import { buildEntryJsonLdSnapshot } from "./seo.js";
 import { buildSubmissionSpecs } from "./submission-spec.js";
+import {
+  buildRegistryRelationGraph,
+  relationLookupFromGraph,
+} from "./relationships.js";
 
 export const ENTRY_SCHEMA_VERSION = 1;
 export const RAYCAST_SCHEMA_VERSION = 2;
@@ -134,8 +138,8 @@ function buildEntryProvenanceFields(entry) {
     "submittedBy",
     "submittedByUrl",
     "submittedAt",
-    "submissionIssueNumber",
-    "submissionIssueUrl",
+    "sourceSubmissionNumber",
+    "sourceSubmissionUrl",
     "importPrNumber",
     "importPrUrl",
     "reviewedBy",
@@ -151,6 +155,12 @@ function buildEntryProvenanceFields(entry) {
     }
   }
   return fields;
+}
+
+function compactDefinedObject(value) {
+  return Object.fromEntries(
+    Object.entries(value).filter(([, item]) => item !== undefined),
+  );
 }
 
 export function buildRaycastDetailMarkdown(entry) {
@@ -182,6 +192,10 @@ export function buildRaycastDetailMarkdown(entry) {
 export function generatedAtForEntries(entries) {
   const latestDate = entries
     .map((entry) => String(entry.dateAdded || "").slice(0, 10))
+    .concat(
+      entries.map((entry) => String(entry.contentUpdatedAt || "").slice(0, 10)),
+    )
+    .concat(entries.map((entry) => String(entry.verifiedAt || "").slice(0, 10)))
     .filter((value) => /^\d{4}-\d{2}-\d{2}$/.test(value))
     .sort()
     .at(-1);
@@ -234,61 +248,77 @@ function buildRepoStats(entry) {
 
 export function buildDirectoryEntries(entries) {
   return entries.map((entry) => {
-    const {
-      body: _body,
-      sections: _sections,
-      headings: _headings,
-      codeBlocks: _codeBlocks,
-      scriptBody: _scriptBody,
-      ...directoryEntry
-    } = entry;
-    return {
-      ...directoryEntry,
+    return compactDefinedObject({
+      category: entry.category,
+      slug: entry.slug,
+      title: entry.title,
+      description: entry.cardDescription || entry.description,
+      author: entry.author || "",
+      dateAdded: entry.dateAdded || "",
+      contentUpdatedAt: entry.contentUpdatedAt || "",
+      tags: entry.tags ?? [],
+      keywords: entry.keywords ?? [],
+      documentationUrl: entry.documentationUrl || "",
+      ...buildEntryProvenanceFields(entry),
+      ...buildEntryBrandFields(entry),
+      repoUrl: entry.repoUrl || "",
+      downloadUrl: entry.downloadUrl || "",
+      downloadTrust: entry.downloadTrust ?? null,
+      packageVerified: Boolean(entry.packageVerified),
+      hasCopySnippet: Boolean(entry.copySnippet || entry.hasCopySnippet),
+      hasUsageSnippet: Boolean(entry.usageSnippet),
+      hasConfigSnippet: Boolean(entry.configSnippet),
+      hasScriptBody: Boolean(entry.scriptBody || entry.hasScriptBody),
+      installable: Boolean(
+        entry.installable ||
+        entry.installCommand ||
+        entry.downloadUrl ||
+        entry.configSnippet,
+      ),
       canonicalUrl: entryCanonicalUrl(entry),
       llmsUrl: entryLlmsUrl(entry),
       apiUrl: entryApiUrl(entry),
       repoStats: buildRepoStats(entry),
       trustSignals: buildEntryTrustSignals(entry),
-    };
+    });
   });
 }
 
 export function buildSearchEntries(entries) {
-  return entries.map((entry) => ({
-    category: entry.category,
-    slug: entry.slug,
-    title: entry.title,
-    seoTitle: entry.seoTitle || entry.title,
-    description: entry.cardDescription || entry.description,
-    seoDescription: entry.seoDescription || entry.description,
-    tags: entry.tags ?? [],
-    keywords: entry.keywords ?? [],
-    author: entry.author || "",
-    ...buildEntryNoteFields(entry),
-    ...buildEntryProvenanceFields(entry),
-    ...buildEntryBrandFields(entry),
-    dateAdded: entry.dateAdded || "",
-    installable: Boolean(
-      entry.installable || entry.installCommand || entry.downloadUrl,
-    ),
-    downloadUrl: entry.downloadUrl || "",
-    downloadTrust: entry.downloadTrust ?? null,
-    verificationStatus: entry.verificationStatus || "",
-    platforms: buildSkillPlatformCompatibility(entry).map(
-      (item) => item.platform,
-    ),
-    supportLevels: buildSkillPlatformCompatibility(entry).map(
-      (item) => item.supportLevel,
-    ),
-    documentationUrl: entry.documentationUrl || "",
-    repoUrl: entry.repoUrl || "",
-    repoStats: buildRepoStats(entry),
-    url: entryCanonicalUrl(entry),
-    canonicalUrl: entryCanonicalUrl(entry),
-    llmsUrl: entryLlmsUrl(entry),
-    apiUrl: entryApiUrl(entry),
-    trustSignals: buildEntryTrustSignals(entry),
-  }));
+  return entries.map((entry) =>
+    compactDefinedObject({
+      category: entry.category,
+      slug: entry.slug,
+      title: entry.title,
+      seoTitle: entry.seoTitle || entry.title,
+      description: entry.cardDescription || entry.description,
+      tags: entry.tags ?? [],
+      keywords: entry.keywords ?? [],
+      author: entry.author || "",
+      ...buildEntryProvenanceFields(entry),
+      ...buildEntryBrandFields(entry),
+      dateAdded: entry.dateAdded || "",
+      installable: Boolean(
+        entry.installable || entry.installCommand || entry.downloadUrl,
+      ),
+      downloadUrl: entry.downloadUrl || "",
+      downloadTrust: entry.downloadTrust ?? null,
+      verificationStatus: entry.verificationStatus || "",
+      platforms: buildSkillPlatformCompatibility(entry).map(
+        (item) => item.platform,
+      ),
+      supportLevels: buildSkillPlatformCompatibility(entry).map(
+        (item) => item.supportLevel,
+      ),
+      documentationUrl: entry.documentationUrl || "",
+      repoUrl: entry.repoUrl || "",
+      repoStats: buildRepoStats(entry),
+      url: entryCanonicalUrl(entry),
+      canonicalUrl: entryCanonicalUrl(entry),
+      apiUrl: entryApiUrl(entry),
+      trustSignals: buildListTrustSignals(entry),
+    }),
+  );
 }
 
 function sha256Text(value) {
@@ -354,6 +384,7 @@ function sourceUrlsForEntry(entry) {
     entry.repoUrl,
     entry.githubUrl,
     entry.websiteUrl,
+    ...(Array.isArray(entry.retrievalSources) ? entry.retrievalSources : []),
   ]
     .map((value) => String(value || "").trim())
     .filter(Boolean)
@@ -384,6 +415,8 @@ export function buildEntryTrustSignals(entry) {
   const packageChecksum =
     entry.downloadSha256 || entry.skillPackage?.sha256 || "";
   const sourceUrls = sourceUrlsForEntry(entry);
+  const hasSafetyNotes = noteList(entry.safetyNotes).length > 0;
+  const hasPrivacyNotes = noteList(entry.privacyNotes).length > 0;
 
   return {
     firstPartyEditorial: entry.disclosure === "heyclaude_pick",
@@ -396,8 +429,24 @@ export function buildEntryTrustSignals(entry) {
     sourceStatus: sourceUrls.length ? "available" : "missing",
     lastVerifiedAt: lastVerifiedForEntry(entry),
     adapterGenerated,
+    hasSafetyNotes,
+    hasPrivacyNotes,
     platforms: platformCompatibility.map((item) => item.platform),
     supportLevels: platformCompatibility.map((item) => item.supportLevel),
+  };
+}
+
+function buildListTrustSignals(entry) {
+  const trustSignals = buildEntryTrustSignals(entry);
+  return {
+    firstPartyEditorial: trustSignals.firstPartyEditorial,
+    packageVerified: trustSignals.packageVerified,
+    sourceStatus: trustSignals.sourceStatus,
+    lastVerifiedAt: trustSignals.lastVerifiedAt,
+    hasSafetyNotes: trustSignals.hasSafetyNotes,
+    hasPrivacyNotes: trustSignals.hasPrivacyNotes,
+    platforms: trustSignals.platforms,
+    supportLevels: trustSignals.supportLevels,
   };
 }
 
@@ -432,7 +481,7 @@ function entryTrustReportRow(entry, generatedAt) {
   const hasProvenance = Boolean(
     entry.submittedBy ||
     entry.reviewedBy ||
-    entry.submissionIssueUrl ||
+    entry.sourceSubmissionUrl ||
     entry.importPrUrl,
   );
   const recommendations = [];
@@ -695,9 +744,7 @@ export function buildCursorSkillAdapter(entry) {
 
 export function buildRaycastEntries(entries) {
   return entries.map((entry) => {
-    const copyText = getCopyText(entry);
-
-    return {
+    return compactDefinedObject({
       category: entry.category,
       slug: entry.slug,
       title: entry.title,
@@ -706,38 +753,42 @@ export function buildRaycastEntries(entries) {
       author: entry.author || "",
       ...buildEntryProvenanceFields(entry),
       ...buildEntryBrandFields(entry),
-      installCommand: entry.installCommand || "",
-      configSnippet: entry.configSnippet || "",
-      ...buildEntryNoteFields(entry),
-      copyText: truncateText(copyText, RAYCAST_COPY_PREVIEW_LIMIT),
-      copyTextLength: copyText.length,
-      copyTextTruncated: copyText.length > RAYCAST_COPY_PREVIEW_LIMIT,
-      detailMarkdown: buildRaycastDetailMarkdown(entry),
       detailUrl: dataUrl("raycast", entry.category, `${entry.slug}.json`),
       webUrl: entryCanonicalUrl(entry),
       canonicalUrl: entryCanonicalUrl(entry),
-      llmsUrl: entryLlmsUrl(entry),
-      apiUrl: entryApiUrl(entry),
-      seoTitle: entry.seoTitle || entry.title,
-      seoDescription: entry.seoDescription || entry.description,
       repoUrl: entry.repoUrl || "",
       repoStats: buildRepoStats(entry),
       documentationUrl: entry.documentationUrl || "",
       downloadTrust: entry.downloadTrust,
       verificationStatus: entry.verificationStatus || "",
       platformCompatibility: buildSkillPlatformCompatibility(entry),
-    };
+    });
   });
 }
 
-export function buildEntryDetail(entry) {
+export function buildEntryDetail(entry, params = {}) {
+  const {
+    codeBlocks: _codeBlocks,
+    sections: _sections,
+    headings: _headings,
+    ...detailEntry
+  } = entry;
+  const relatedEntries =
+    params.relatedEntries ??
+    params.relationLookup?.get?.(`${entry.category}:${entry.slug}`) ??
+    undefined;
   return {
     schemaVersion: ENTRY_SCHEMA_VERSION,
     key: `${entry.category}:${entry.slug}`,
-    entry: {
-      ...entry,
+    entry: compactDefinedObject({
+      ...detailEntry,
+      relatedEntries,
+      hasCopySnippet: Boolean(entry.copySnippet || entry.hasCopySnippet),
+      hasUsageSnippet: Boolean(entry.usageSnippet),
+      hasConfigSnippet: Boolean(entry.configSnippet),
+      hasScriptBody: Boolean(entry.scriptBody || entry.hasScriptBody),
       repoStats: buildRepoStats(entry),
-    },
+    }),
     trustSignals: buildEntryTrustSignals(entry),
   };
 }
@@ -752,11 +803,10 @@ export function buildRaycastDetail(entry) {
     author: entry.author || "",
     ...buildEntryProvenanceFields(entry),
     ...buildEntryBrandFields(entry),
-    copyText: getCopyText(entry),
     detailMarkdown: buildRaycastDetailMarkdown(entry),
     webUrl: entryCanonicalUrl(entry),
     canonicalUrl: entryCanonicalUrl(entry),
-    llmsUrl: entryLlmsUrl(entry),
+    llmsUrl: dataUrl("llms", entry.category, `${entry.slug}.txt`),
     apiUrl: entryApiUrl(entry),
     seoTitle: entry.seoTitle || entry.title,
     seoDescription: entry.seoDescription || entry.description,
@@ -910,7 +960,16 @@ export function buildPluginExportFeed(entries) {
   };
 }
 
-export function buildRegistryChangelogFeed(entries) {
+export function buildRegistryChangelogFeed(entries, params = {}) {
+  const relationLookup =
+    params.relationLookup ??
+    relationLookupFromGraph(
+      buildRegistryRelationGraph(entries, {
+        siteUrl: params.siteUrl ?? SITE_URL,
+        generatedAt: generatedAtForEntries(entries),
+        limit: params.relationLimit,
+      }),
+    );
   const changes = [...entries]
     .sort((left, right) => {
       const dateCompare = String(right.dateAdded || "").localeCompare(
@@ -928,7 +987,9 @@ export function buildRegistryChangelogFeed(entries) {
       canonicalUrl: entryCanonicalUrl(entry),
       llmsUrl: entryLlmsUrl(entry),
       apiUrl: entryApiUrl(entry),
-      artifactHash: buildArtifactHash(buildEntryDetail(entry)),
+      artifactHash: buildArtifactHash(
+        buildEntryDetail(entry, { ...params, relationLookup }),
+      ),
     }));
 
   const payload = {
@@ -1098,6 +1159,7 @@ export function buildRegistryManifest(entries, extra = {}) {
       registryChangelog: dataUrl("registry-changelog.json"),
       registryManifest: dataUrl("registry-manifest.json"),
       registryTrust: dataUrl("registry-trust-report.json"),
+      relationGraph: dataUrl("relation-graph.json"),
       contentQuality: dataUrl("content-quality-report.json"),
       contentQualityPrompts: dataUrl("content-quality-prompts.json"),
       jsonLdSnapshots: dataUrl("jsonld-snapshots.json"),
@@ -1150,6 +1212,12 @@ export function buildRegistryArtifactSet(entries, params = {}) {
   const siteDescription =
     params.siteDescription ??
     "The Claude directory for agents, MCP servers, skills, commands, hooks, rules, guides, collections, and statuslines.";
+  const relationGraph = buildRegistryRelationGraph(entries, {
+    siteUrl,
+    limit: params.relationLimit,
+    generatedAt: generatedAtForEntries(entries),
+  });
+  const relationLookup = relationLookupFromGraph(relationGraph);
   const files = [
     {
       path: "directory-index.json",
@@ -1187,7 +1255,12 @@ export function buildRegistryArtifactSet(entries, params = {}) {
     {
       path: "registry-changelog.json",
       type: "json",
-      value: buildRegistryChangelogFeed(entries),
+      value: buildRegistryChangelogFeed(entries, { relationLookup }),
+    },
+    {
+      path: "relation-graph.json",
+      type: "json",
+      value: relationGraph,
     },
     {
       path: "registry-trust-report.json",
@@ -1202,7 +1275,7 @@ export function buildRegistryArtifactSet(entries, params = {}) {
     {
       path: "submission-spec.json",
       type: "json",
-      value: buildSubmissionSpecs(),
+      value: buildSubmissionSpecs({ siteUrl }),
     },
     {
       path: "content-quality-report.json",
@@ -1235,7 +1308,7 @@ export function buildRegistryArtifactSet(entries, params = {}) {
       {
         path: `entries/${entry.category}/${entry.slug}.json`,
         type: "json",
-        value: buildEntryDetail(entry),
+        value: buildEntryDetail(entry, { relationLookup }),
       },
       {
         path: `llms/${entry.category}/${entry.slug}.txt`,

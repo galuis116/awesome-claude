@@ -16,7 +16,6 @@ const CONTENT_CATEGORIES = [
   "guides",
   "hooks",
   "mcp",
-  "prompts",
   "rules",
   "skills",
   "statuslines",
@@ -70,6 +69,22 @@ function contentCategoriesFromFiles() {
 
 const contentCategories = contentCategoriesFromFiles();
 const contentCategoryTouched = contentCategories.length > 0;
+const sourceContentOnly =
+  eventName === "pull_request" &&
+  !all &&
+  files.length > 0 &&
+  files.every((file) => /^content\/[^/]+\/[^/]+\.mdx$/i.test(file));
+const readmeOnly =
+  eventName === "pull_request" &&
+  !all &&
+  files.length === 1 &&
+  files[0] === "README.md";
+const directSubmission =
+  eventName === "pull_request" &&
+  !all &&
+  files.length === 1 &&
+  contentCategories.length === 1 &&
+  /^content\/[^/]+\/[^/]+\.mdx$/i.test(files[0]);
 const contentValidationInfra = touches(
   /^examples\/content\//,
   /^\.github\/ISSUE_TEMPLATE\//,
@@ -84,21 +99,39 @@ const generatedArtifactInfra = touches(
   /^apps\/web\/src\/generated\//,
   "README.md",
 );
+const submissionAutomationInfra = touches(
+  /^scripts\/analyze-submission-risk\.mjs$/,
+);
+const submissionGateInfra = touches(
+  /^apps\/submission-gate\//,
+  /^tests\/submission-gate-.*\.test\.ts$/,
+);
 
 const flags = {
+  direct_submission: directSubmission,
+  source_content_only: sourceContentOnly,
+  readme_only: readmeOnly,
   content: contentCategoryTouched || contentValidationInfra,
   content_config: contentValidationInfra,
-  registry: generatedArtifactInfra,
-  web: touches(
-    /^apps\/web\//,
-    /^emails\//,
-    /^cloudflare\/api-schema-heyclaude-openapi\.yaml$/,
-    /^scripts\/(generate-openapi|validate-d1-jobs|validate-deployment-artifacts)\.(mjs|ts)$/,
-    /^tests\/(api-|commercial-intake|discovery-surfaces|seo-jsonld|submission-api|submission-workflows|votes-api).*\.test\.ts$/,
-    "vitest.config.ts",
-    "package.json",
-    "pnpm-lock.yaml",
-  ),
+  registry:
+    !directSubmission &&
+    (contentCategoryTouched ||
+      generatedArtifactInfra ||
+      submissionAutomationInfra),
+  web:
+    !directSubmission &&
+    (contentCategoryTouched ||
+      submissionAutomationInfra ||
+      touches(
+        /^apps\/web\//,
+        /^emails\//,
+        /^cloudflare\/api-schema-heyclaude-openapi\.yaml$/,
+        /^scripts\/(generate-openapi|validate-d1-jobs|validate-deployment-artifacts)\.(mjs|ts)$/,
+        /^tests\/(api-|commercial-intake|discovery-surfaces|seo-jsonld|submission-api|submission-workflows|votes-api).*\.test\.ts$/,
+        "vitest.config.ts",
+        "package.json",
+        "pnpm-lock.yaml",
+      )),
   mcp: touches(
     /^packages\/mcp\//,
     /^apps\/web\/src\/routes\/api\/mcp\.ts$/,
@@ -107,14 +140,17 @@ const flags = {
     "package.json",
     "pnpm-lock.yaml",
   ),
-  raycast: touches(
-    /^integrations\/raycast\//,
-    /^apps\/web\/public\/data\/raycast/,
-    /^scripts\/(build-content-index|validate-raycast-feed)\.mjs$/,
-    /^tests\/registry-artifacts\.test\.ts$/,
-    "package.json",
-    "pnpm-lock.yaml",
-  ),
+  raycast:
+    !directSubmission &&
+    (contentCategoryTouched ||
+      touches(
+        /^integrations\/raycast\//,
+        /^apps\/web\/public\/data\/raycast/,
+        /^scripts\/(build-content-index|validate-raycast-feed)\.mjs$/,
+        /^tests\/registry-artifacts\.test\.ts$/,
+        "package.json",
+        "pnpm-lock.yaml",
+      )),
   packages: touches(
     /^apps\/web\/public\/downloads\//,
     /^content\/skills\/.*\.zip$/,
@@ -123,15 +159,20 @@ const flags = {
     "package.json",
     "pnpm-lock.yaml",
   ),
-  ci: touches(
-    /^\.github\/workflows\//,
-    /^scripts\/ci\//,
-    /^\.trunk\//,
-    "renovate.json",
-    "package.json",
-    "pnpm-lock.yaml",
-    "vitest.config.ts",
-  ),
+  submission_gate:
+    submissionGateInfra ||
+    touches("package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml"),
+  ci:
+    submissionAutomationInfra ||
+    touches(
+      /^\.github\/workflows\//,
+      /^scripts\/ci\//,
+      /^\.trunk\//,
+      "renovate.json",
+      "package.json",
+      "pnpm-lock.yaml",
+      "vitest.config.ts",
+    ),
 };
 
 flags.docs = touches(

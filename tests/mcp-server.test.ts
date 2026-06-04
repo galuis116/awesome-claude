@@ -12,6 +12,7 @@ import {
   listRegistryPrompts,
   listRegistryResources,
   listRegistryResourceTemplates,
+  planWorkflowToolbox,
   READ_ONLY_TOOL_NAMES,
   readRegistryResource,
   TOOL_DEFINITIONS,
@@ -442,7 +443,7 @@ describe("HeyClaude read-only MCP helpers", () => {
       expect(prompts.prompts.map((prompt) => prompt.name)).toEqual([
         "find_best_asset",
         "prepare_submission",
-        "review_submission_before_issue",
+        "review_submission_before_pr",
         "install_asset_safely",
       ]);
 
@@ -726,6 +727,81 @@ describe("HeyClaude read-only MCP helpers", () => {
     });
   });
 
+  it("matches a lowercase planner goal against mixed-case entry text", async () => {
+    const readJsonArtifact = async (relativePath: string) => {
+      expect(relativePath).toBe("search-index.json");
+      return {
+        entries: [
+          {
+            category: "mcp",
+            slug: "kubernetes-cluster-helper",
+            title: "Kubernetes CLUSTER Deployment Helper",
+            description: "Manage ROLLOUTS across namespaces with guided steps.",
+            tags: ["DevOps"],
+            keywords: [],
+            platforms: ["Claude"],
+          },
+          {
+            category: "agents",
+            slug: "unrelated-entry",
+            title: "Totally Unrelated Thing",
+            description: "Has nothing to do with the goal.",
+            tags: [],
+            keywords: [],
+            platforms: [],
+          },
+        ],
+      };
+    };
+
+    const result = await callRegistryTool(
+      "plan_workflow_toolbox",
+      { goal: "kubernetes cluster rollouts", limit: 5 },
+      { readJsonArtifact },
+    );
+
+    expect(result).toMatchObject({ ok: true });
+    const slugs = result.entries.map((entry: any) => entry.slug);
+    // Lowercase goal tokens (kubernetes/cluster/rollouts) must match the
+    // mixed-case title ("CLUSTER") and description ("ROLLOUTS").
+    expect(slugs).toContain("kubernetes-cluster-helper");
+    expect(slugs).not.toContain("unrelated-entry");
+    const matched = result.entries.find(
+      (entry: any) => entry.slug === "kubernetes-cluster-helper",
+    );
+    expect(matched.searchScore).toBeGreaterThan(0);
+  });
+
+  it("clamps the planner runtime limit to 10 even when called directly", async () => {
+    // Direct runtime calls bypass the 1-10 input schema, so the tool must
+    // clamp internally. Categories are spread so diversity selection still
+    // fills up to the clamp instead of capping early at 2 per category.
+    const categories = ["mcp", "agents", "skills", "hooks", "commands"];
+    const readJsonArtifact = async (relativePath: string) => {
+      expect(relativePath).toBe("search-index.json");
+      return {
+        entries: Array.from({ length: 15 }, (_, index) => ({
+          category: categories[index % categories.length],
+          slug: `automation-entry-${index}`,
+          title: `Automation Workflow Helper ${index}`,
+          description: "Automates the workflow with guided steps.",
+          tags: ["automation", "workflow"],
+          keywords: ["automation"],
+          platforms: ["Claude"],
+        })),
+      };
+    };
+
+    const result = await planWorkflowToolbox(
+      { goal: "automation workflow", limit: 20 },
+      { readJsonArtifact },
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.count).toBe(result.entries.length);
+    expect(result.entries.length).toBeLessThanOrEqual(10);
+  });
+
   it("searches registry artifacts with trust filters", async () => {
     const result = await callRegistryTool(
       "search_registry",
@@ -824,6 +900,7 @@ describe("HeyClaude read-only MCP helpers", () => {
     expect(result).toMatchObject({
       ok: true,
       key: `${skill.category}:${skill.slug}`,
+      relationGraph: true,
       count: expect.any(Number),
     });
     expect(result.entries.length).toBeGreaterThan(0);
@@ -831,6 +908,7 @@ describe("HeyClaude read-only MCP helpers", () => {
       `${skill.category}:${skill.slug}`,
     );
     expect(result.entries[0]).toMatchObject({
+      relation: expect.any(String),
       relatedScore: expect.any(Number),
       relatedReasons: expect.arrayContaining([expect.any(String)]),
     });
@@ -889,8 +967,13 @@ describe("HeyClaude read-only MCP helpers", () => {
         createsPullRequests: false,
       },
       reviewModel: {
-        autoMerge: false,
-        importPrRequiresApprovalLabel: ["accepted", "import-approved"],
+        autoMerge: "content_only_private_gate",
+        prFirst: true,
+        autoMergeRequires: expect.arrayContaining([
+          "validate-content",
+          "Superagent Security Scan",
+          "private maintainer-agent review",
+        ]),
       },
       artifactPolicy: {
         communityZipHostingAllowed: false,
@@ -1178,7 +1261,7 @@ describe("HeyClaude read-only MCP helpers", () => {
       fs.readFileSync(path.join(dataDir, "submission-spec.json"), "utf8"),
     ) as {
       categories: Record<string, { fields: Array<{ id: string }> }>;
-      issueTemplates: Record<string, unknown>;
+      prIntake: { mode: string };
     };
 
     expect(Object.keys(submissionSpec.categories)).toEqual(
@@ -1193,11 +1276,8 @@ describe("HeyClaude read-only MCP helpers", () => {
     expect(result).toMatchObject({
       ok: true,
       category: "skills",
-      schema: {
-        template: "submit-skill.yml",
-      },
-      issueTemplate: {
-        labels: expect.arrayContaining(["content-submission", "skills"]),
+      prIntake: {
+        mode: "github_app_user_fork_pr",
       },
     });
     expect(result.schema.fields.map((field: any) => field.id)).toEqual(
@@ -1232,31 +1312,26 @@ describe("HeyClaude read-only MCP helpers", () => {
       valid: true,
       category: "skills",
       slug: "example-submission-skill",
-      issuePreview: {
-        title: "Submit Skill: Example Submission Skill",
-        labels: expect.arrayContaining(["content-submission", "skills"]),
+      prPreview: {
+        title: "Add Skill: Example Submission Skill",
       },
     });
 
     const urls = await callRegistryTool(
       "build_submission_urls",
-      { fields, includeIssueBody: true },
+      { fields, includePrBody: true },
       { dataDir },
     );
     expect(urls).toMatchObject({
       ok: true,
       valid: true,
       submitUrl: expect.stringContaining("https://heyclau.de/submit"),
-      githubIssueUrl: expect.stringContaining(
-        "https://github.com/JSONbored/awesome-claude/issues/new",
-      ),
-      issueDraft: {
-        title: "Submit Skill: Example Submission Skill",
-        labels: expect.arrayContaining(["content-submission", "skills"]),
+      reviewUrl: expect.stringContaining("https://heyclau.de/submit"),
+      prDraft: {
+        title: "Add Skill: Example Submission Skill",
       },
     });
-    expect(urls.githubIssueUrl).toContain("template=submit-skill.yml");
-    expect(urls.issueDraft.body).toContain("### Brand domain");
+    expect(urls.prDraft.body).toContain("### Brand domain");
     expect(JSON.stringify(urls)).not.toMatch(/token|secret|authorization/i);
   });
 
@@ -1319,13 +1394,12 @@ describe("HeyClaude read-only MCP helpers", () => {
       ok: true,
       valid: true,
       category: "mcp",
-      issueDraft: {
-        title: "Submit MCP Server: Example Draft MCP",
-        labels: expect.arrayContaining(["content-submission", "community-mcp"]),
+      prDraft: {
+        title: "Add MCP Server: Example Draft MCP",
         body: expect.stringContaining("### Install command"),
       },
-      githubIssueUrl: expect.stringContaining("template=submit-mcp.yml"),
-      submissionPolicy: expect.stringContaining("does not auto-merge"),
+      reviewUrl: expect.stringContaining("https://heyclau.de/submit"),
+      submissionPolicy: expect.stringContaining("may be merged automatically"),
       artifactPolicy: expect.stringContaining("quarantine/review"),
     });
 
@@ -1338,7 +1412,7 @@ describe("HeyClaude read-only MCP helpers", () => {
       ok: true,
       valid: true,
       recommendedAction: expect.stringMatching(
-        /open_review_issue|review_possible_duplicate/,
+        /open_review_pr|review_possible_duplicate/,
       ),
       duplicateReview: { ok: true },
       reviewChecklist: expect.arrayContaining([

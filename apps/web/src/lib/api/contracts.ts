@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { normalizeBrandDomain } from "@heyclaude/registry";
+import { normalizeBrandDomain } from "@heyclaude/registry/brand-assets";
 import { validateJobPublicationQuality } from "@heyclaude/registry/commercial";
 
 const entryKeySchema = z.string().regex(/^[a-z0-9-]+:[a-z0-9-]+$/);
@@ -147,6 +147,73 @@ export const publicJobsQuerySchema = z.object({
     .meta({ type: "integer", minimum: 0, maximum: 10_000, default: 0 }),
 });
 
+export const publicJobParamsSchema = z.object({
+  slug: safeSlugSchema,
+});
+
+const publicJobListingSchema = z
+  .object({
+    slug: z.string(),
+    title: z.string(),
+    company: z.string(),
+    companyUrl: z.string().url().optional(),
+    location: z.string(),
+    description: z.string(),
+    descriptionMd: z.string().optional(),
+    type: z.string().optional(),
+    postedAt: z.string().optional(),
+    compensation: z.string().optional(),
+    equity: z.string().optional(),
+    bonus: z.string().optional(),
+    benefits: z.array(z.string()).max(24).optional(),
+    responsibilities: z.array(z.string()).max(24).optional(),
+    requirements: z.array(z.string()).max(24).optional(),
+    featured: z.boolean(),
+    sponsored: z.boolean().optional(),
+    applyUrl: z.string(),
+    tier: jobTierSchema.optional(),
+    status: jobStatusSchema.optional(),
+    source: jobSourceSchema.optional(),
+    sourceKind: jobSourceKindSchema.optional(),
+    sourceUrl: z.string().optional(),
+    firstSeenAt: z.string().optional(),
+    lastCheckedAt: z.string().optional(),
+    sourceCheckedAt: z.string().optional(),
+    curationNote: z.string().optional(),
+    claimedEmployer: z.boolean().optional(),
+    expiresAt: z.string().optional(),
+    isRemote: z.boolean().optional(),
+    isWorldwide: z.boolean().optional(),
+    webUrl: z.string().url(),
+    labels: z.array(z.string()).max(24),
+    sourceLabel: z.string(),
+    applySourceLabel: z.string(),
+    lastVerifiedAt: z.string().optional(),
+  })
+  .passthrough();
+
+export const publicJobsResponseSchema = z.object({
+  schemaVersion: z.number(),
+  kind: z.literal("jobs-index"),
+  generatedAt: z.string(),
+  count: z.number().int().nonnegative(),
+  total: z.number().int().nonnegative(),
+  totalAvailable: z.number().int().nonnegative(),
+  limit: z.number().int().min(1).max(100),
+  offset: z.number().int().min(0),
+  nextOffset: z.number().int().nullable(),
+  entries: z.array(publicJobListingSchema).max(100),
+});
+
+export const publicJobDetailResponseSchema = z.object({
+  schemaVersion: z.number(),
+  kind: z.literal("jobs-detail"),
+  slug: z.string(),
+  generatedAt: z.string(),
+  entry: publicJobListingSchema,
+  related: z.array(publicJobListingSchema).max(4),
+});
+
 export const apiErrorEnvelopeSchema = z.object({
   ok: z.literal(false),
   error: z.object({
@@ -168,6 +235,8 @@ export const registryTrustSignalsSchema = z.object({
   sourceStatus: z.enum(["available", "missing"]).or(z.string()).optional(),
   lastVerifiedAt: z.string().optional(),
   adapterGenerated: z.boolean().optional(),
+  hasSafetyNotes: z.boolean().optional(),
+  hasPrivacyNotes: z.boolean().optional(),
   platforms: z.array(z.string()).max(12).optional(),
   supportLevels: z.array(z.string()).max(12).optional(),
 });
@@ -186,8 +255,8 @@ export const registryProvenanceSchema = z.object({
   submittedBy: z.string().optional(),
   submittedByUrl: z.string().url().optional(),
   submittedAt: z.string().optional(),
-  submissionIssueNumber: z.number().int().positive().optional(),
-  submissionIssueUrl: z.string().url().optional(),
+  sourceSubmissionNumber: z.number().int().positive().optional(),
+  sourceSubmissionUrl: z.string().url().optional(),
   importPrNumber: z.number().int().positive().optional(),
   importPrUrl: z.string().url().optional(),
   reviewedBy: z.string().optional(),
@@ -307,11 +376,13 @@ export const registrySearchQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).max(10_000).optional().default(0),
 });
 
-export const registryTrendingQuerySchema = z.object({
-  category: categorySchema,
-  platform: platformSchema,
-  limit: z.coerce.number().int().min(1).max(50).optional().default(12),
-});
+export const registryTrendingQuerySchema = z
+  .object({
+    category: categorySchema,
+    platform: platformSchema,
+    limit: z.coerce.number().int().min(1).max(50).optional().default(12),
+  })
+  .strict();
 
 export const registryDiffQuerySchema = z.object({
   since: z.string().trim().max(128).optional().default(""),
@@ -382,8 +453,16 @@ export const votesToggleBodySchema = z.object({
   vote: z.boolean(),
 });
 
+const newsletterSegmentIdSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(64)
+  .regex(/^[a-z0-9:_-]+$/i);
+
 export const newsletterSubscribeBodySchema = z.object({
   email: safeEmailSchema,
+  segments: z.array(newsletterSegmentIdSchema).max(20).optional().default([]),
   source: z.string().trim().max(64).optional().default("site"),
 });
 
@@ -394,20 +473,9 @@ export const newsletterWebhookBodySchema = z
   })
   .passthrough();
 
-export const submissionBodySchema = z.object({
-  fields: z.record(z.string(), z.unknown()).optional().default({}),
-  turnstileToken: z.string().max(4096).optional().default(""),
-  honeypot: z.string().max(256).optional().default(""),
-});
-
 export const submissionPreflightBodySchema = z.object({
   fields: z.record(z.string(), z.unknown()).optional().default({}),
   honeypot: z.string().max(256).optional().default(""),
-});
-
-export const submissionQueueQuerySchema = z.object({
-  number: z.coerce.number().int().positive().optional(),
-  limit: z.coerce.number().int().min(1).max(100).optional().default(50),
 });
 
 const submissionPreflightNoteSchema = z.object({
@@ -424,18 +492,18 @@ const submissionPreflightDuplicateSchema = z.object({
   reasons: z.array(z.string().max(80)).max(8),
 });
 
-const submissionPreflightSuccessResponseSchema = z.object({
+const submissionPreflightPrPreviewSchema = z.object({
+  title: z.string().max(300),
+  targetPath: z.string().max(240),
+  branchHint: z.string().max(200),
+  baseRef: z.string().max(120),
+  body: z.string().max(32_000),
+});
+
+const submissionPreflightBaseResponseSchema = z.object({
   ok: z.literal(true),
-  valid: z.boolean(),
-  routeSuggestion: z.enum(["github_issue", "fix_required", "tools_form"]),
   category: z.string(),
   slug: z.string(),
-  fallbackUrl: z.string().url(),
-  issuePreview: z.object({
-    title: z.string().max(300),
-    labels: z.array(z.string().max(80)).max(12),
-    body: z.string().max(32_000),
-  }),
   schema: z.object({
     ok: z.boolean(),
     skipped: z.boolean(),
@@ -460,59 +528,27 @@ const submissionPreflightSuccessResponseSchema = z.object({
   duplicates: z.array(submissionPreflightDuplicateSchema).max(5),
   nextAction: z.object({
     label: z.string().max(160),
-    url: z.string().max(4096).optional(),
+    url: z.string().url().max(4096).optional(),
   }),
 });
 
-const submissionPreflightDiscardResponseSchema = z.object({
-  ok: z.literal(true),
-  valid: z.literal(false),
-  queued: z.literal(false),
+const submissionPreflightPrReadyResponseSchema = submissionPreflightBaseResponseSchema.extend({
+  valid: z.literal(true),
+  routeSuggestion: z.literal("submit_pr"),
+  prPreview: submissionPreflightPrPreviewSchema,
 });
+
+const submissionPreflightNonPrResponseSchema = submissionPreflightBaseResponseSchema
+  .extend({
+    valid: z.literal(false),
+    routeSuggestion: z.enum(["fix_required", "route_away", "manual_review"]),
+  })
+  .strict();
 
 export const submissionPreflightResponseSchema = z.union([
-  submissionPreflightSuccessResponseSchema,
-  submissionPreflightDiscardResponseSchema,
+  submissionPreflightPrReadyResponseSchema,
+  submissionPreflightNonPrResponseSchema,
 ]);
-
-const submissionQueueStatusSchema = z.enum([
-  "queued",
-  "in_review",
-  "ready",
-  "approved",
-  "import_pr_open",
-  "needs_author_input",
-  "source_needs_verification",
-  "stale",
-  "imported",
-  "closed",
-]);
-
-const submissionQueueItemSchema = z.object({
-  number: z.number().int().positive(),
-  url: z.string().url(),
-  title: z.string().max(300),
-  author: z.string().max(120),
-  authorUrl: z.string().url().optional(),
-  category: z.string().max(80),
-  slug: z.string().max(160),
-  status: submissionQueueStatusSchema,
-  state: z.enum(["open", "closed"]),
-  labels: z.array(z.string().max(120)).max(32),
-  blockers: z.array(z.string().max(240)).max(12),
-  updatedAt: z.string(),
-  createdAt: z.string(),
-  closedAt: z.string().nullable().optional(),
-  importPrUrl: z.string().url().optional(),
-});
-
-export const submissionQueueResponseSchema = z.object({
-  ok: z.literal(true),
-  generatedAt: z.string(),
-  repo: z.string(),
-  count: z.number().int().nonnegative(),
-  entries: z.array(submissionQueueItemSchema).max(100),
-});
 
 export const downloadQuerySchema = z.object({
   asset: z.string().trim().max(256),
@@ -768,7 +804,7 @@ export type ApiRouteDefinition = {
   responseSchemaName?: string;
   responseContentType?: string;
   staticSurface?: boolean;
-  auth?: "admin-token" | "resend-signature" | "turnstile";
+  auth?: "admin-token" | "resend-signature";
 };
 
 function route(definition: ApiRouteDefinition) {
@@ -1021,32 +1057,13 @@ export const apiRouteDefinitions = {
       binding: "API_DYNAMIC_RATE_LIMIT",
     },
   }),
-  "submissions.create": route({
-    id: "submissions.create",
-    method: "POST",
-    path: "/api/submissions",
-    summary: "Create a reviewable content submission issue",
-    description:
-      "Validates schema-aligned UGC fields, applies anti-abuse controls, and creates a GitHub issue for review. Eligible source-backed submissions may later be approved for a PR from GitHub automation, but this endpoint never writes content files, publishes registry entries, or hosts community ZIP/MCPB artifacts directly.",
-    tags: ["Submissions"],
-    originCheck: true,
-    bodySchema: submissionBodySchema,
-    bodyLimitBytes: 64 * 1024,
-    auth: "turnstile",
-    rateLimit: {
-      scope: "submissions",
-      limit: 8,
-      windowMs: 60_000,
-      binding: "API_STRICT_RATE_LIMIT",
-    },
-  }),
   "submissions.preflight": route({
     id: "submissions.preflight",
     method: "POST",
     path: "/api/submissions/preflight",
     summary: "Preflight a content submission draft",
     description:
-      "Runs read-only schema, duplicate, source, package, and safety/privacy checks before a contributor opens a public GitHub submission issue. This endpoint never creates issues, labels, branches, pull requests, registry content, or package artifacts.",
+      "Runs read-only schema, duplicate, source, package, and safety/privacy checks before a contributor opens a single-entry content PR through the private submission gate. This endpoint never creates issues, labels, branches, pull requests, registry content, or package artifacts.",
     tags: ["Submissions"],
     originCheck: true,
     bodySchema: submissionPreflightBodySchema,
@@ -1055,24 +1072,6 @@ export const apiRouteDefinitions = {
     rateLimit: {
       scope: "submissions-preflight",
       limit: 30,
-      windowMs: 60_000,
-      binding: "API_DYNAMIC_RATE_LIMIT",
-    },
-  }),
-  "submissions.queue": route({
-    id: "submissions.queue",
-    method: "GET",
-    path: "/api/submissions/queue",
-    summary: "List public content submission issue status",
-    description:
-      "Returns sanitized, read-only status for public content-submission issues. This endpoint reads GitHub issue metadata only; it cannot approve, reject, label, import, create branches, create PRs, or publish registry content.",
-    tags: ["Submissions"],
-    originCheck: true,
-    querySchema: submissionQueueQuerySchema,
-    responseSchema: submissionQueueResponseSchema,
-    rateLimit: {
-      scope: "submissions-queue",
-      limit: 60,
       windowMs: 60_000,
       binding: "API_DYNAMIC_RATE_LIMIT",
     },
@@ -1120,8 +1119,27 @@ export const apiRouteDefinitions = {
     tags: ["Jobs"],
     originCheck: true,
     querySchema: publicJobsQuerySchema,
+    responseSchema: publicJobsResponseSchema,
     rateLimit: {
       scope: "jobs-list",
+      limit: 120,
+      windowMs: 60_000,
+      binding: "API_DYNAMIC_RATE_LIMIT",
+    },
+  }),
+  "jobs.detail": route({
+    id: "jobs.detail",
+    method: "GET",
+    path: "/api/jobs/{slug}",
+    summary: "Get one active reviewed job",
+    description:
+      "Returns one active D1-backed public job listing plus a small related set. Expired, closed, stale, unreviewed, or source-unhealthy jobs return 404.",
+    tags: ["Jobs"],
+    originCheck: true,
+    paramsSchema: publicJobParamsSchema,
+    responseSchema: publicJobDetailResponseSchema,
+    rateLimit: {
+      scope: "jobs-detail",
       limit: 120,
       windowMs: 60_000,
       binding: "API_DYNAMIC_RATE_LIMIT",

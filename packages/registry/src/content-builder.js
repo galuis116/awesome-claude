@@ -1,7 +1,5 @@
 import path from "node:path";
 
-import matter from "gray-matter";
-
 import {
   deriveSeoFields,
   extractCodeBlocks,
@@ -12,6 +10,7 @@ import {
   normalizeBody,
 } from "./content-schema.js";
 import { buildBrandAssetMetadata } from "./brand-assets.js";
+import { parseSafeFrontmatter } from "./frontmatter.js";
 
 export const DEFAULT_DIRECTORY_REPO_URL =
   "https://github.com/JSONbored/awesome-claude";
@@ -26,7 +25,12 @@ export function parseGitHubRepo(repoUrl) {
 
   try {
     const url = new URL(repoUrl);
-    if (url.hostname !== "github.com") return null;
+    // Accept github.com and its www. alias (both appear in author-provided
+    // repo URLs); stripping only a leading "www." keeps other subdomains
+    // (gist., api., raw.) rejected.
+    if (url.hostname.toLowerCase().replace(/^www\./, "") !== "github.com") {
+      return null;
+    }
 
     const parts = url.pathname.split("/").filter(Boolean);
     if (parts.length < 2) return null;
@@ -100,8 +104,10 @@ function buildProvenanceFields(data = {}) {
     submittedBy: normalizeTextField(data.submittedBy),
     submittedByUrl: normalizeTextField(data.submittedByUrl),
     submittedAt: normalizeDateTimeField(data.submittedAt),
-    submissionIssueNumber: normalizePositiveInteger(data.submissionIssueNumber),
-    submissionIssueUrl: normalizeTextField(data.submissionIssueUrl),
+    sourceSubmissionNumber: normalizePositiveInteger(
+      data.sourceSubmissionNumber,
+    ),
+    sourceSubmissionUrl: normalizeTextField(data.sourceSubmissionUrl),
     importPrNumber: normalizePositiveInteger(data.importPrNumber),
     importPrUrl: normalizeTextField(data.importPrUrl),
     reviewedBy: normalizeTextField(data.reviewedBy),
@@ -210,7 +216,7 @@ export function buildContentEntryFromMdx(params) {
     contentUpdatedAt,
     getLocalDownloadSha256 = () => null,
   } = params;
-  const { data, content } = matter(source);
+  const { data, content } = parseSafeFrontmatter(source);
   const body = normalizeBody(content, category);
   const headings = extractHeadings(body);
   const codeBlocks = extractCodeBlocks(body);
@@ -274,7 +280,10 @@ export function buildContentEntryFromMdx(params) {
       ? String(data.authorProfileUrl)
       : undefined,
     dateAdded: normalizeDateAdded(data.dateAdded),
-    contentUpdatedAt: contentUpdatedAt ? String(contentUpdatedAt) : undefined,
+    contentUpdatedAt:
+      data.contentUpdatedAt || contentUpdatedAt
+        ? String(data.contentUpdatedAt || contentUpdatedAt)
+        : undefined,
     ...buildProvenanceFields(data),
     tags,
     keywords: seo.keywords,
@@ -289,7 +298,10 @@ export function buildContentEntryFromMdx(params) {
       : undefined,
     websiteUrl: data.websiteUrl ? String(data.websiteUrl) : undefined,
     ...brandAssets,
-    affiliateUrl: data.affiliateUrl ? String(data.affiliateUrl) : undefined,
+    affiliateUrl:
+      category === "tools" && data.affiliateUrl
+        ? String(data.affiliateUrl)
+        : undefined,
     pricingModel: data.pricingModel ? String(data.pricingModel) : undefined,
     disclosure: data.disclosure ? String(data.disclosure) : undefined,
     applicationCategory: data.applicationCategory

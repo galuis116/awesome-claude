@@ -2,7 +2,7 @@
 
 HeyClaude is a curated directory for Claude agents, MCP servers, skills, commands, hooks, rules, guides, collections, statuslines, and related AI workflow resources.
 
-The fastest path for most contributions is issue-first. The repository can turn well-formed, source-backed submissions into reviewable PRs, but maintainers still review before anything is merged.
+The fastest path for most contributions is PR-first. The website can turn a well-formed, source-backed submission into a single-entry PR for review, but maintainers still review before anything is merged.
 
 ## Contribution paths
 
@@ -12,17 +12,15 @@ Use the website form:
 
 - [heyclau.de/submit](https://heyclau.de/submit)
 
-This creates a structured GitHub issue with the right fields for the selected category. Fully valid, source-backed, non-artifact submissions may be approved for an import PR after policy gates pass. Automation does not auto-merge.
+This runs public preflight checks, asks you to continue with GitHub, then opens a focused PR with exactly one raw `content/<category>/<slug>.mdx` file targeting `main`. Fully valid, source-backed, non-artifact submissions may be merged directly after content validation, Superagent, and private maintainer-agent review pass.
 
-Maintainers trigger a submission import by applying `import-approved` or `accepted` after review. `needs-author-input`, `source-needs-verification`, `stale-submission`, and `import-pr-open` block or defer import until the issue is fixed, verified, reopened for review, or already represented by an import PR.
+The private gate can close hard failures, request changes for fixable gaps, route rare high-risk or inconclusive entries to manual review, or merge deterministic low-risk passes. This automation is limited to single-entry content PRs; platform, workflow, package, and product PRs remain maintainer-reviewed.
 
 No CLA signature is required. Repo checks focus on submission quality, source verification, contributor trust, and security review.
 
-### 2. Open a GitHub submission issue
+### 2. Open a direct PR
 
-Use GitHub issue templates when the website is not convenient:
-
-- [New submission issue](https://github.com/JSONbored/awesome-claude/issues/new/choose)
+Direct PRs are the advanced path. Edit source content under `content/<category>/`, keep the PR focused on one entry, and target `main`.
 
 Keep submissions concrete. Include canonical source URLs, docs, install/config details, and enough context for someone else to verify the entry.
 
@@ -35,15 +33,14 @@ For hooks, MCP servers, skills, commands, and statuslines, disclose meaningful s
 
 Use `prerequisites` only for setup requirements. Use `disclosure` only for commercial/tool listing status.
 
-### 3. Open a direct PR
-
-Direct PRs are the advanced path. Edit source content under `content/<category>/` and keep the PR focused. External contributor PRs should not include generated files.
+External contributor PRs should not include generated files.
 
 Do not edit these in external content PRs:
 
 - `README.md`
 - `apps/web/public/data/**`
 - `apps/web/src/generated/**`
+- `apps/web/src/routeTree.gen.ts`
 - `apps/web/public/downloads/**`
 
 Maintainer automation regenerates those outputs.
@@ -70,12 +67,9 @@ corepack prepare pnpm@11.1.3 --activate
 pnpm install --frozen-lockfile
 ```
 
-For browser validation, install Playwright Chromium when needed:
-
-```sh
-pnpm exec playwright install --with-deps chromium
-pnpm test:e2e
-```
+Normal PR validation does not require Playwright. For user-facing page changes,
+include desktop and mobile screenshots or a clear `No visual impact` note in the
+PR, then run the focused checks listed below.
 
 CI remains the source of truth for merge readiness.
 
@@ -92,15 +86,25 @@ If you are submitting a package-like resource, include the source repository and
 
 ## Local validation
 
-From the repo root:
+For a direct content PR, keep validation narrow:
 
 ```sh
 pnpm install --frozen-lockfile
 pnpm validate:content:strict
-pnpm validate:issue-templates
+```
+
+Do not run generation or commit build output for one-file content submissions.
+The website, API, Raycast, LLM, MCP, and route artifacts are generated during
+CI/build/deploy from the accepted source content.
+
+For platform, package, API, MCP, Raycast, or maintainer artifact work, run the
+focused checks that match the changed surface:
+
+```sh
+pnpm install --frozen-lockfile
 pnpm validate:packages
 pnpm scan:packages
-pnpm test:submission-intake
+pnpm test:submission-pr-first
 pnpm test:registry-artifacts
 pnpm validate:raycast-feed
 MCP_ENDPOINT_URL=http://localhost:3000/api/mcp pnpm --filter @heyclaude/mcp validate:endpoint
@@ -110,8 +114,8 @@ pnpm build
 If you changed categories or submission fields, also run:
 
 ```sh
-pnpm generate:issue-templates
 pnpm generate:readme
+pnpm generate:openapi
 ```
 
 Direct contributors should usually leave generated output out of the PR unless a maintainer asks for it.

@@ -1,4 +1,5 @@
 import atlasRegistry from "@/generated/atlas-registry.json";
+import { seoClusterDefinitions } from "@/data/seo-cluster-definitions";
 import type { Category, Entry } from "@/types/registry";
 import { buildEntry, type RegistryEntry } from "@/data/entry-normalize";
 
@@ -26,6 +27,39 @@ export const BRIEF_ISSUES = registryChangelog.slice(0, 6).map((item, index) => (
   tags: [item.category, item.type ?? "updated"],
 }));
 
+export const WEEKLY_BRIEF = {
+  generatedAt,
+  issueNumber: registryChangelog.length,
+  date: registryChangelog[0]?.dateAdded ?? generatedAt.slice(0, 10),
+  newEntries: registryChangelog
+    .filter((item) => item.type === "added")
+    .slice(0, 6)
+    .map((item) => ({
+      ref: `${item.category}/${item.slug}`,
+      title: item.title,
+      date: item.dateAdded ?? generatedAt.slice(0, 10),
+    })),
+  trustedInstalls: ENTRIES.filter((entry) => entry.packageVerified || entry.trust === "trusted")
+    .slice(0, 6)
+    .map((entry) => ({
+      ref: `${entry.category}/${entry.slug}`,
+      title: entry.title,
+      reason: entry.packageVerified
+        ? "maintainer-built package metadata"
+        : "strong registry trust signals",
+    })),
+  sourceBackedPicks: ENTRIES.filter(
+    (entry) => entry.source !== "unverified" && (entry.safetyNotes || entry.privacyNotes),
+  )
+    .slice(0, 6)
+    .map((entry) => ({
+      ref: `${entry.category}/${entry.slug}`,
+      title: entry.title,
+      reason: "source-backed with safety or privacy notes",
+    })),
+  notableChanges: BRIEF_ISSUES.slice(0, 4),
+};
+
 export interface BestPick {
   ref: string;
   why: string;
@@ -36,6 +70,9 @@ export interface BestList {
   slug: string;
   title: string;
   subtitle: string;
+  eyebrow: string;
+  seoTitle: string;
+  seoDescription: string;
   category: string;
   curator: string;
   updatedAt: string;
@@ -48,75 +85,79 @@ type BestListSeed = {
   slug: string;
   title: string;
   subtitle: string;
-  category: Category;
+  eyebrow: string;
+  seoTitle: string;
+  seoDescription: string;
+  categories: Category[];
   tags?: string[];
+  keywords?: string[];
+  requireSource?: boolean;
+  requireInstallTrust?: boolean;
+  itemLimit: number;
   intro: string;
 };
 
-const BEST_LIST_SEEDS: BestListSeed[] = [
-  {
-    slug: "best-mcp-for-databases",
-    title: "Best MCP servers for databases",
-    subtitle: "Database bridges with source links, install payloads, and review-first metadata.",
-    category: "mcp",
-    tags: ["database", "postgres", "redis", "airtable", "data"],
-    intro:
-      "Start with MCP servers that expose clear setup commands and source-backed metadata. Treat auth-bearing servers as review-first until credentials, logs, and scopes are verified.",
-  },
-  {
-    slug: "best-code-review-workflows",
-    title: "Best Claude workflows for code review",
-    subtitle: "Agents, commands, hooks, and rules for reviewing changes before they ship.",
-    category: "agents",
-    tags: ["code-review", "review", "security", "quality"],
-    intro:
-      "These picks are selected for review-oriented workflows: diff explanation, security checks, quality gates, and contributor feedback loops.",
-  },
-  {
-    slug: "best-safety-hooks",
-    title: "Best safety hooks",
-    subtitle: "Hooks that help bound risky agent actions.",
-    category: "hooks",
-    tags: ["safety", "security", "backup", "validation", "secret"],
-    intro:
-      "Hooks can block or reshape dangerous automation. Review the trigger, file access, and failure mode before enabling any hook in a real project.",
-  },
-  {
-    slug: "best-claude-skills",
-    title: "Best Claude skills and capability packs",
-    subtitle: "Installable skills with source-backed metadata and practical workflow focus.",
-    category: "skills",
-    tags: ["skill", "capability", "codex", "automation", "developer-tooling"],
-    intro:
-      "Skill entries are strongest when they include source, install path, and clear behavioral scope. Use these as starting points, not blanket install approvals.",
-  },
-  {
-    slug: "best-claude-commands",
-    title: "Best Claude Code slash commands",
-    subtitle: "Commands for debugging, reviewing, refactoring, and generating project context.",
-    category: "commands",
-    tags: ["debugging", "review", "refactoring", "documentation", "performance"],
-    intro:
-      "Slash commands should be small, predictable, and easy to inspect. Prefer commands that make their inputs and expected output obvious.",
-  },
-  {
-    slug: "best-statuslines",
-    title: "Best Claude Code statuslines",
-    subtitle: "Statusline scripts for model, cost, timer, and workflow visibility.",
-    category: "statuslines",
-    tags: ["statusline", "monitoring", "cost", "timer", "performance"],
-    intro:
-      "Statuslines run inside local developer environments. Check script language, dependencies, and whether the entry discloses local file or telemetry behavior.",
-  },
-];
+const BEST_LIST_SEEDS: BestListSeed[] = seoClusterDefinitions.map((definition) => ({
+  slug: definition.slug,
+  title: definition.title,
+  subtitle: definition.description,
+  eyebrow: definition.eyebrow,
+  seoTitle: definition.seoTitle,
+  seoDescription: definition.seoDescription,
+  categories: definition.categories as Category[],
+  tags: definition.tags,
+  keywords: definition.keywords,
+  requireSource: definition.requireSource,
+  requireInstallTrust: definition.requireInstallTrust,
+  itemLimit: definition.itemLimit,
+  intro: definition.description,
+}));
 
-function entryScore(entry: Entry, tags: string[] = []) {
+function matchesBestListSeed(entry: Entry, seed: BestListSeed) {
+  if (!seed.categories.includes(entry.category)) return false;
+  if (seed.requireSource && entry.source === "unverified") return false;
+
+  if (seed.requireInstallTrust) {
+    const hasInstallSurface = Boolean(
+      entry.installCommand || entry.configSnippet || entry.downloadUrl || entry.fullCopy,
+    );
+    const hasTrustedInstall =
+      entry.packageVerified ||
+      entry.trust === "trusted" ||
+      entry.source === "first-party" ||
+      entry.source === "source-backed";
+    if (!hasInstallSurface || !hasTrustedInstall) return false;
+  }
+
+  return true;
+}
+
+function entryScore(entry: Entry, seed: BestListSeed) {
+  const terms = [...(seed.tags ?? []), ...(seed.keywords ?? [])];
   const tagSet = new Set(
     [...(entry.tags ?? []), ...(entry.keywords ?? [])].map((tag) => tag.toLowerCase()),
   );
-  const tagScore = tags.reduce((score, tag) => score + (tagSet.has(tag.toLowerCase()) ? 10 : 0), 0);
+  const tagScore = terms.reduce(
+    (score, tag) => score + (tagSet.has(tag.toLowerCase()) ? 10 : 0),
+    0,
+  );
+  const searchableText = [
+    entry.title,
+    entry.description,
+    entry.cardDescription,
+    entry.category,
+    ...(entry.tags ?? []),
+    ...(entry.keywords ?? []),
+  ]
+    .join(" ")
+    .toLowerCase();
+  const textScore = terms.reduce(
+    (score, term) => score + (searchableText.includes(term.toLowerCase()) ? 3 : 0),
+    0,
+  );
   return (
     tagScore +
+    textScore +
     (entry.packageVerified ? 12 : 0) +
     (entry.safetyNotes ? 8 : 0) +
     (entry.privacyNotes ? 4 : 0) +
@@ -146,21 +187,18 @@ function makeBestPick(entry: Entry): BestPick {
 }
 
 export const BEST_LISTS: BestList[] = BEST_LIST_SEEDS.map((seed) => {
-  const candidates = ENTRIES.filter((entry) => {
-    if (entry.category === seed.category) return true;
-    const tagSet = new Set(
-      [...(entry.tags ?? []), ...(entry.keywords ?? [])].map((tag) => tag.toLowerCase()),
-    );
-    return seed.tags?.some((tag) => tagSet.has(tag.toLowerCase())) ?? false;
-  })
-    .sort((a, b) => entryScore(b, seed.tags) - entryScore(a, seed.tags))
-    .slice(0, 6);
+  const candidates = ENTRIES.filter((entry) => matchesBestListSeed(entry, seed))
+    .sort((a, b) => entryScore(b, seed) - entryScore(a, seed))
+    .slice(0, seed.itemLimit);
 
   return {
     slug: seed.slug,
     title: seed.title,
     subtitle: seed.subtitle,
-    category: seed.category,
+    eyebrow: seed.eyebrow,
+    seoTitle: seed.seoTitle,
+    seoDescription: seed.seoDescription,
+    category: seed.categories[0] ?? "tools",
     curator: "@heyclaude-editors",
     updatedAt: generatedAt.slice(0, 10),
     count: candidates.length,

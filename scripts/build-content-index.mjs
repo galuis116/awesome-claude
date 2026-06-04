@@ -171,7 +171,7 @@ function writeFileIfChanged(filePath, content) {
 
 function writeJsonFile(filePath, value) {
   ensureDir(path.dirname(filePath));
-  return writeFileIfChanged(filePath, `${JSON.stringify(value, null, 2)}\n`);
+  return writeFileIfChanged(filePath, `${JSON.stringify(value)}\n`);
 }
 
 async function writePrettierJsonFile(filePath, value) {
@@ -268,7 +268,7 @@ function pickAtlasEntry(entry) {
     submittedBy: entry.submittedBy,
     submittedByUrl: entry.submittedByUrl,
     submittedAt: entry.submittedAt,
-    submissionIssueUrl: entry.submissionIssueUrl,
+    sourceSubmissionUrl: entry.sourceSubmissionUrl,
     importPrUrl: entry.importPrUrl,
     reviewedBy: entry.reviewedBy,
     reviewedAt: entry.reviewedAt,
@@ -478,8 +478,12 @@ async function main() {
   const reposToFetch = new Map();
   const directoryRepo = parseGitHubRepo(DEFAULT_DIRECTORY_REPO_URL);
   const existingContentUpdatedAt = loadExistingContentUpdatedAt();
-  const existingEntryRepoStats = loadExistingEntryRepoStats();
-  const existingSiteStats = loadExistingSiteStats();
+  const existingEntryRepoStats = ENABLE_GITHUB_REPO_STATS
+    ? loadExistingEntryRepoStats()
+    : new Map();
+  const existingSiteStats = ENABLE_GITHUB_REPO_STATS
+    ? loadExistingSiteStats()
+    : null;
 
   if (directoryRepo) {
     reposToFetch.set(directoryRepo.key, directoryRepo);
@@ -511,7 +515,8 @@ async function main() {
       const existingUpdatedAt = existingContentUpdatedAt.get(
         `${entry.category}:${entry.slug}`,
       );
-      entry.contentUpdatedAt = existingUpdatedAt || entry.dateAdded;
+      entry.contentUpdatedAt =
+        entry.contentUpdatedAt || existingUpdatedAt || entry.dateAdded;
       const githubRepo = parseGitHubRepo(entry.repoUrl);
 
       if (githubRepo) {

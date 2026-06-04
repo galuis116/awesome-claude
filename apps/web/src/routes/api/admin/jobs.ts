@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createApiFileRoute } from "@/lib/api/file-route";
 
 import {
   adminJobsPatchBodySchema,
@@ -12,7 +12,7 @@ import {
   type InferApiBody,
   type InferApiQuery,
 } from "@/lib/api/router";
-import { isAdminAuthorized } from "@/lib/admin-auth";
+import { isJobsAdminAuthorized } from "@/lib/admin-auth";
 import { logApiError, logApiInfo, logApiWarn } from "@/lib/api-logs";
 import { getSiteDb } from "@/lib/db";
 import {
@@ -52,7 +52,7 @@ async function requireReadyJobsDb(request: Request, requestId: string) {
 }
 
 export const GET = createApiHandler("adminJobs.list", async ({ request, query, requestId }) => {
-  if (!isAdminAuthorized(request)) {
+  if (!isJobsAdminAuthorized(request)) {
     logApiWarn(request, "admin.jobs.unauthorized");
     return apiError("unauthorized", 401, { requestId });
   }
@@ -75,7 +75,7 @@ export const GET = createApiHandler("adminJobs.list", async ({ request, query, r
 });
 
 export const POST = createApiHandler("adminJobs.upsert", async ({ request, body, requestId }) => {
-  if (!isAdminAuthorized(request)) {
+  if (!isJobsAdminAuthorized(request)) {
     logApiWarn(request, "admin.jobs.unauthorized");
     return apiError("unauthorized", 401, { requestId });
   }
@@ -117,7 +117,7 @@ export const POST = createApiHandler("adminJobs.upsert", async ({ request, body,
 });
 
 export const PATCH = createApiHandler("adminJobs.update", async ({ request, body, requestId }) => {
-  if (!isAdminAuthorized(request)) {
+  if (!isJobsAdminAuthorized(request)) {
     logApiWarn(request, "admin.jobs.unauthorized");
     return apiError("unauthorized", 401, { requestId });
   }
@@ -164,8 +164,7 @@ export const PATCH = createApiHandler("adminJobs.update", async ({ request, body
   );
 });
 
-// @ts-ignore Generated API route is added to routeTree during Vite build.
-export const Route = createFileRoute("/api/admin/jobs")({
+export const Route = createApiFileRoute("/api/admin/jobs")({
   server: {
     handlers: {
       GET: async ({ request, params }) => GET(request, { params }),

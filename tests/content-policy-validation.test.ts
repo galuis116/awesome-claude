@@ -6,20 +6,21 @@ import { describe, expect, it } from "vitest";
 
 import { repoRoot } from "./helpers/registry-fixtures";
 
-function runContentPolicy(tmpDir: string, content: string) {
+function runContentPolicy(
+  tmpDir: string,
+  content: string,
+  sourceType = "same_repo_direct",
+  files = [
+    {
+      filename: "content/tools/example-tool.mdx",
+      status: "added",
+      content,
+    },
+  ],
+) {
   const filesJson = path.join(tmpDir, "files.json");
   const outputJson = path.join(tmpDir, "policy-output.json");
-  fs.writeFileSync(
-    filesJson,
-    JSON.stringify([
-      {
-        filename: "content/tools/example-tool.mdx",
-        status: "added",
-        content,
-      },
-    ]),
-    "utf8",
-  );
+  fs.writeFileSync(filesJson, JSON.stringify(files), "utf8");
 
   const args = [
     path.join(repoRoot, "scripts/ci/validate-content-policy.mjs"),
@@ -30,7 +31,7 @@ function runContentPolicy(tmpDir: string, content: string) {
     "--output",
     outputJson,
     "--source-type",
-    "same_repo_direct",
+    sourceType,
   ];
 
   try {
@@ -104,6 +105,284 @@ Example body.
     expect(output.reviewFlags).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ id: "invalid_frontmatter" }),
+      ]),
+    );
+  });
+
+  it("allows maintainer-owned content to reference HeyClaude-hosted downloads when disclosures are present", () => {
+    const tmpDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "heyclaude-content-policy-"),
+    );
+    const content = `---
+title: Example Tool
+category: tools
+description: Example maintainer-owned package fixture.
+downloadUrl: /downloads/skills/example-skill.zip
+submittedBy: JSONbored
+submittedByUrl: https://github.com/JSONbored
+safetyNotes:
+  - Downloads a maintainer-built archive into the current working directory.
+privacyNotes:
+  - Do not include private data in generated drafts.
+---
+
+Example body.
+`;
+
+    const result = runContentPolicy(tmpDir, content);
+
+    expect(result.status).toBe(0);
+    const output = JSON.parse(fs.readFileSync(result.outputJson, "utf8"));
+    expect(output).toMatchObject({
+      ok: true,
+      sourceType: "same_repo_direct",
+    });
+    expect(output.reviewFlags).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "community_local_download_request" }),
+      ]),
+    );
+  });
+
+  it("does not fail mixed same-repository maintenance PRs as direct submissions", () => {
+    const tmpDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "heyclaude-content-policy-"),
+    );
+    const content = `---
+title: Example MCP
+category: mcp
+description: Example maintainer metadata migration fixture.
+sourceUrl: https://github.com/example/example-mcp
+installCommand: npx example-mcp --api-key $EXAMPLE_API_KEY
+submittedBy: JSONbored
+submittedByUrl: https://github.com/JSONbored
+sourceSubmissionNumber: 123
+---
+
+Example body.
+`;
+
+    const result = runContentPolicy(tmpDir, content, "same_repo_direct", [
+      {
+        filename: "content/mcp/example-mcp.mdx",
+        status: "modified",
+        content,
+      },
+      {
+        filename: "packages/registry/src/content-schema.js",
+        status: "modified",
+        content: "export const schema = {};",
+      },
+    ]);
+
+    expect(result.status).toBe(0);
+    const output = JSON.parse(fs.readFileSync(result.outputJson, "utf8"));
+    expect(output).toMatchObject({
+      ok: true,
+      sourceType: "same_repo_direct",
+    });
+    expect(output.requestChangesReasons).toEqual([]);
+    expect(output.classificationWarnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "missing_privacy_notes" }),
+      ]),
+    );
+  });
+
+  it("still blocks external content PRs that request HeyClaude-hosted downloads", () => {
+    const tmpDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "heyclaude-content-policy-"),
+    );
+    const content = `---
+title: Example Tool
+category: tools
+description: Example external package fixture.
+downloadUrl: /downloads/skills/example-skill.zip
+submittedBy: contributor
+submittedByUrl: https://github.com/contributor
+safetyNotes:
+  - Downloads a package archive into the current working directory.
+privacyNotes:
+  - Do not include private data in generated drafts.
+---
+
+Example body.
+`;
+
+    const result = runContentPolicy(tmpDir, content, "external_direct");
+
+    expect(result.status).not.toBe(0);
+    const output = JSON.parse(fs.readFileSync(result.outputJson, "utf8"));
+    expect(output.failures).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("community_local_download_request"),
+      ]),
+    );
+  });
+
+  it("fails external content PRs that include referral or affiliate source URLs", () => {
+    const tmpDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "heyclaude-content-policy-"),
+    );
+    const content = `---
+title: Example Tool
+category: tools
+description: Example external referral fixture.
+websiteUrl: https://example.com/products/assistant?ref=creator
+sourceUrl: https://github.com/example/example-tool
+submittedBy: contributor
+submittedByUrl: https://github.com/contributor
+---
+
+Example body.
+`;
+
+    const result = runContentPolicy(tmpDir, content, "external_direct");
+
+    expect(result.status).not.toBe(0);
+    const output = JSON.parse(fs.readFileSync(result.outputJson, "utf8"));
+    expect(output.failures).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("affiliate_referral_url"),
+      ]),
+    );
+  });
+
+  it("fails external content PRs that hide referral paths without query params", () => {
+    const tmpDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "heyclaude-content-policy-"),
+    );
+    const content = `---
+title: Example Tool
+category: tools
+description: Example external referral path fixture.
+websiteUrl: https://example.com/ref
+sourceUrl: https://github.com/example/example-tool
+submittedBy: contributor
+submittedByUrl: https://github.com/contributor
+---
+
+Example body.
+`;
+
+    const result = runContentPolicy(tmpDir, content, "external_direct");
+
+    expect(result.status).not.toBe(0);
+    const output = JSON.parse(fs.readFileSync(result.outputJson, "utf8"));
+    expect(output.failures).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("affiliate_referral_url"),
+      ]),
+    );
+  });
+
+  it("fails direct content PRs with category/path mismatch", () => {
+    const tmpDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "heyclaude-content-policy-"),
+    );
+    const content = `---
+title: Example Guide
+category: tools
+description: Example mismatched category fixture.
+sourceUrl: https://github.com/example/example-guide
+submittedBy: contributor
+submittedByUrl: https://github.com/contributor
+---
+
+Example body.
+`;
+
+    const result = runContentPolicy(tmpDir, content, "external_direct", [
+      {
+        filename: "content/guides/example-guide.mdx",
+        status: "added",
+        content,
+      },
+    ]);
+
+    expect(result.status).not.toBe(0);
+    const output = JSON.parse(fs.readFileSync(result.outputJson, "utf8"));
+    expect(output.failures).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("category_path_mismatch"),
+      ]),
+    );
+  });
+
+  it("fails external content PRs that set packageVerified", () => {
+    const tmpDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "heyclaude-content-policy-"),
+    );
+    const content = `---
+title: Example MCP
+category: mcp
+description: Example package verification abuse fixture.
+sourceUrl: https://github.com/example/example-mcp
+packageVerified: true
+submittedBy: contributor
+submittedByUrl: https://github.com/contributor
+---
+
+Example body.
+`;
+
+    const result = runContentPolicy(tmpDir, content, "external_direct", [
+      {
+        filename: "content/mcp/example-mcp.mdx",
+        status: "added",
+        content,
+      },
+    ]);
+
+    expect(result.status).not.toBe(0);
+    const output = JSON.parse(fs.readFileSync(result.outputJson, "utf8"));
+    expect(output.failures).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("unsafe_package_verified_true"),
+      ]),
+    );
+  });
+
+  it("fails external content PRs that edit generated artifacts", () => {
+    const tmpDir = fs.mkdtempSync(
+      path.join(os.tmpdir(), "heyclaude-content-policy-"),
+    );
+    const content = `---
+title: Example Tool
+category: tools
+description: Example generated artifact fixture.
+sourceUrl: https://github.com/example/example-tool
+submittedBy: contributor
+submittedByUrl: https://github.com/contributor
+---
+
+Example body.
+`;
+
+    const result = runContentPolicy(tmpDir, content, "external_direct", [
+      {
+        filename: "content/tools/example-tool.mdx",
+        status: "added",
+        content,
+      },
+      {
+        filename: "apps/web/public/data/directory.json",
+        status: "modified",
+        content: "{}",
+      },
+      {
+        filename: "README.md",
+        status: "modified",
+        content: "# Edited README\n",
+      },
+    ]);
+
+    expect(result.status).not.toBe(0);
+    const output = JSON.parse(fs.readFileSync(result.outputJson, "utf8"));
+    expect(output.failures).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("generated_registry_artifact_change"),
+        expect.stringContaining("generated_readme_change"),
       ]),
     );
   });

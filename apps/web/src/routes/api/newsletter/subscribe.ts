@@ -1,15 +1,21 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createApiFileRoute } from "@/lib/api/file-route";
 
 import { newsletterSubscribeBodySchema } from "@/lib/api/contracts";
 import { apiError, apiJson, createApiHandler, type InferApiBody } from "@/lib/api/router";
 import { logApiError, logApiInfo, redactEmail } from "@/lib/api-logs";
-import { getEnvString } from "@/lib/cloudflare-env";
+import { getEnvString } from "@/lib/cloudflare-env.server";
+
+function envSegmentId(followId: string): string | undefined {
+  const key = `RESEND_SEGMENT_${followId.toUpperCase().replace(/[^A-Z0-9]/g, "_")}`;
+  return getEnvString(key) || undefined;
+}
 
 export const POST = createApiHandler(
   "newsletter.subscribe",
   async ({ request, body, requestId }) => {
     const payload = body as InferApiBody<typeof newsletterSubscribeBodySchema>;
     const email = payload.email;
+    const segments = payload.segments;
     const source = payload.source;
 
     const resendApiKey = getEnvString("RESEND_API_KEY");
@@ -20,6 +26,12 @@ export const POST = createApiHandler(
       return apiError("newsletter_not_configured", 503, { requestId });
     }
 
+    const segmentIds = new Set<string>([resendSegmentId]);
+    for (const segment of segments) {
+      const segmentId = envSegmentId(segment);
+      if (segmentId) segmentIds.add(segmentId);
+    }
+
     const requestBody: Record<string, unknown> = {
       email,
       unsubscribed: false,
@@ -28,7 +40,7 @@ export const POST = createApiHandler(
       metadata: {
         source,
       },
-      segments: [{ id: resendSegmentId }],
+      segments: [...segmentIds].map((id) => ({ id })),
     };
 
     let response: Response;
@@ -73,8 +85,7 @@ export const POST = createApiHandler(
   },
 );
 
-// @ts-ignore Generated API route is added to routeTree during Vite build.
-export const Route = createFileRoute("/api/newsletter/subscribe")({
+export const Route = createApiFileRoute("/api/newsletter/subscribe")({
   server: {
     handlers: {
       POST: async ({ request, params }) => POST(request, { params }),

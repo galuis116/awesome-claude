@@ -1,10 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createApiFileRoute } from "@/lib/api/file-route";
 
 import { Webhook } from "svix";
 
 import { apiError, apiJson, createApiHandler } from "@/lib/api/router";
 import { logApiError, logApiInfo, logApiWarn, redactEmail } from "@/lib/api-logs";
-import { getEnvString } from "@/lib/cloudflare-env";
+import { getEnvString } from "@/lib/cloudflare-env.server";
 
 type ResendEvent = {
   type?: string;
@@ -137,8 +137,7 @@ export const POST = createApiHandler(
   },
 );
 
-// @ts-ignore Generated API route is added to routeTree during Vite build.
-export const Route = createFileRoute("/api/newsletter/webhook")({
+export const Route = createApiFileRoute("/api/newsletter/webhook")({
   server: {
     handlers: {
       POST: async ({ request, params }) => POST(request, { params }),

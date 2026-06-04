@@ -4,17 +4,8 @@ import {
   looksLikeToolAppListing,
   missingToolListingReviewFields,
   TOOLS_CATEGORY,
-  toolListingApprovalMessage,
   toolListingRoutingMessage,
 } from "./submission-classification.js";
-import { analyzeIssueSubmissionRisk } from "./submission-risk.js";
-import {
-  recommendedLabelsForCategory,
-  SUBMISSION_NEEDS_AUTHOR_INPUT_LABEL,
-  SUBMISSION_PROTECTED_REVIEW_LABELS,
-  SUBMISSION_SOURCE_NEEDS_VERIFICATION_LABEL,
-  SUBMISSION_STALE_LABEL,
-} from "./submission-labels.js";
 import { buildSubmissionFieldModel } from "./submission-spec.js";
 
 export const CORE_CATEGORIES = categorySpec.categoryOrder;
@@ -27,7 +18,6 @@ export const CATEGORY_REQUIREMENTS = Object.fromEntries(
 );
 
 export const COMMON_REQUIRED_FIELDS = categorySpec.commonIssueRequiredFields;
-const DAY_MS = 24 * 60 * 60 * 1000;
 const HEYCLAUDE_HOSTNAME = "heyclau.de";
 const RISK_BEARING_SUBMISSION_CATEGORIES = new Set([
   "mcp",
@@ -43,11 +33,6 @@ const LOW_DETAIL_DISCLOSURE_NOTES = new Set([
   "no",
   "not applicable",
 ]);
-
-export const SUBMISSION_STALE_POLICY = {
-  reminderDays: 7,
-  closeDays: 14,
-};
 
 export const HEADING_KEY_MAP = {
   name: "name",
@@ -398,7 +383,7 @@ function normalizePlainFieldValue(lines) {
   );
 }
 
-export function parseIssueFormBody(body) {
+export function parseSubmissionPrBody(body) {
   const sections = {};
   const text = String(body || "");
   let currentLabel = "";
@@ -534,14 +519,14 @@ export function normalizeSubmissionPayloadFields(fields = {}) {
   return normalizeParsedFields(normalized);
 }
 
-export function buildSubmissionIssueTitle(fields = {}) {
+export function buildSubmissionPrTitle(fields = {}) {
   const normalized = normalizeSubmissionPayloadFields(fields);
   const category = normalizeCategory(normalized.category);
   const label = singularLabel(categorySpec.categories[category]?.label || "");
-  return `Submit ${label || "Entry"}: ${normalizeValue(normalized.name) || "New directory entry"}`;
+  return `Add ${label || "Entry"}: ${normalizeValue(normalized.name) || "New directory entry"}`;
 }
 
-export function buildSubmissionIssueBody(fields = {}) {
+export function buildSubmissionPrBody(fields = {}) {
   const normalized = normalizeSubmissionPayloadFields(fields);
   const category = normalizeCategory(normalized.category);
   const model = buildSubmissionFieldModel(category);
@@ -576,41 +561,17 @@ export function buildSubmissionIssueBody(fields = {}) {
   return lines.join("\n").trimEnd();
 }
 
-export function buildSubmissionIssueDraft(fields = {}) {
+export function buildSubmissionPrDraft(fields = {}) {
   const normalized = normalizeSubmissionPayloadFields(fields);
-  const category = normalizeCategory(normalized.category);
   return {
-    title: buildSubmissionIssueTitle(normalized),
-    body: buildSubmissionIssueBody(normalized),
-    labels: CORE_CATEGORIES.includes(category)
-      ? recommendedLabelsForCategory(category)
-      : ["content-submission", "needs-review"],
+    title: buildSubmissionPrTitle(normalized),
+    body: buildSubmissionPrBody(normalized),
   };
 }
 
-export function issueLabels(issue) {
-  return Array.isArray(issue.labels)
-    ? issue.labels
-        .map((label) => {
-          if (typeof label === "string") return label.trim().toLowerCase();
-          return String(label?.name ?? "")
-            .trim()
-            .toLowerCase();
-        })
-        .filter(Boolean)
-    : [];
-}
-
-export function looksLikeSubmissionIssue(issue = {}) {
-  const labels = issueLabels(issue);
-  if (labels.includes("content-submission")) {
-    return true;
-  }
-
-  const title = String(issue.title || "").trim();
-  const body = String(issue.body || "");
-  if (looksLikeSubmitTitle(title)) return true;
-
+export function looksLikeSubmissionPrDraft(draft = {}) {
+  const title = String(draft.title || "").trim();
+  const body = String(draft.body || "");
   const normalizedBody = body.toLowerCase();
   const hasCategoryField =
     normalizedBody.includes("### category") ||
@@ -626,7 +587,13 @@ export function looksLikeSubmissionIssue(issue = {}) {
     normalizedBody.includes("json data") ||
     normalizedBody.includes("github url") ||
     normalizedBody.includes("docs url");
-  return hasCategoryField && hasNameOrSourceField;
+  const hasSubmissionShape = hasCategoryField && hasNameOrSourceField;
+
+  if (looksLikeSubmitTitle(title) || /^add(?:\s|:|-|$)/i.test(title)) {
+    return true;
+  }
+
+  return hasSubmissionShape;
 }
 
 export function isLikelyAffiliateUrl(value) {
@@ -643,6 +610,7 @@ export function isLikelyAffiliateUrl(value) {
       "coupon",
       "irclickid",
       "partner",
+      "ref",
       "referral",
       "referral_code",
       "via",
@@ -800,532 +768,10 @@ const TOOL_DISCLOSURES = new Set([
   "claimed",
 ]);
 
-export function recommendedSubmissionLabels(
-  issue,
-  report = validateSubmission(issue),
-) {
-  if (!looksLikeSubmissionIssue(issue)) return [];
-  const labels = new Set(issueLabels(issue));
-  if (report?.category && CORE_CATEGORIES.includes(report.category)) {
-    for (const label of recommendedLabelsForCategory(report.category)) {
-      labels.add(label);
-    }
-  } else {
-    labels.add("content-submission");
-    labels.add("needs-review");
-  }
-  if (report && (report.skipped || !report.ok)) {
-    labels.add(SUBMISSION_NEEDS_AUTHOR_INPUT_LABEL);
-  }
-  if (submissionSourceNeedsVerification(report, issue)) {
-    labels.add(SUBMISSION_SOURCE_NEEDS_VERIFICATION_LABEL);
-  }
-  const staleState = submissionStaleState(issue, report);
-  if (staleState === "reminder_due" || staleState === "close_eligible") {
-    labels.add(SUBMISSION_STALE_LABEL);
-  }
-  return [...labels].sort();
-}
-
-export function hasProtectedSubmissionLabel(issue = {}) {
-  const labels = new Set(issueLabels(issue));
-  return SUBMISSION_PROTECTED_REVIEW_LABELS.some((label) => labels.has(label));
-}
-
-export function submissionSourceNeedsVerification(report, issue = {}) {
-  if (!report || report.skipped) return false;
-  const labels = new Set(issueLabels(issue));
-  if (labels.has(SUBMISSION_SOURCE_NEEDS_VERIFICATION_LABEL)) return true;
-  if (
-    report.warnings?.some((warning) =>
-      String(warning).includes("No github_url/docs_url provided"),
-    )
-  ) {
-    return true;
-  }
-  return Boolean(
-    report.errors?.some((error) =>
-      /must be a valid https URL|affiliate\/referral URLs|local \/downloads hosting/.test(
-        String(error),
-      ),
-    ),
-  );
-}
-
-function parseTimestamp(value) {
-  const timestamp = Date.parse(String(value || ""));
-  return Number.isFinite(timestamp) ? timestamp : 0;
-}
-
-export function submissionAgeDays(issue = {}, options = {}) {
-  const updatedAt = parseTimestamp(issue.updatedAt || issue.updated_at);
-  const createdAt = parseTimestamp(issue.createdAt || issue.created_at);
-  const reference = updatedAt || createdAt;
-  if (!reference) return 0;
-  const now = options.now ? parseTimestamp(options.now) : Date.now();
-  if (!Number.isFinite(now) || now <= reference) return 0;
-  return Math.floor((now - reference) / DAY_MS);
-}
-
-export function submissionStaleState(
-  issue = {},
-  report = validateSubmission(issue),
-  options = {},
-) {
-  if (report?.skipped || hasProtectedSubmissionLabel(issue)) {
-    return "not_applicable";
-  }
-  if (report?.ok) return "not_applicable";
-
-  const ageDays = submissionAgeDays(issue, options);
-  if (ageDays >= SUBMISSION_STALE_POLICY.closeDays) {
-    return "close_eligible";
-  }
-  if (ageDays >= SUBMISSION_STALE_POLICY.reminderDays) {
-    return "reminder_due";
-  }
-  return "fresh";
-}
-
-export function submissionQueueStatus(report, issue = {}, options = {}) {
-  if (report?.skipped) return "skipped";
-  if (hasProtectedSubmissionLabel(issue)) return "maintainer_review";
-  const staleState = submissionStaleState(issue, report, options);
-  if (staleState === "close_eligible") return "close_eligible";
-  if (staleState === "reminder_due") return "stale_reminder_due";
-  if (!report?.ok) return "needs_author_input";
-  if (submissionSourceNeedsVerification(report, issue)) {
-    return "source_needs_verification";
-  }
-  return "import_ready";
-}
-
-function submissionQueueNextAction(
-  status,
-  issue = {},
-  riskTier = "low",
-  policyDecision = "maintainer_review",
-) {
-  const labels = new Set(issueLabels(issue));
-  if (labels.has("import-pr-open")) return "skip";
-  if (labels.has("accepted") || labels.has("import-approved")) return "import";
-  if (status === "skipped") return "skip";
-  if (status === "close_eligible") return "close_stale";
-  if (status === "stale_reminder_due") return "send_stale_reminder";
-  if (status === "needs_author_input") return "request_author_input";
-  if (status === "source_needs_verification") return "verify_source";
-  if (policyDecision === "blocked") return "review_risk";
-  if (riskTier === "high" || riskTier === "critical") return "review_risk";
-  if (status === "maintainer_review") return "review_risk";
-  return policyDecision === "auto_import_eligible" ? "import" : "review_risk";
-}
-
-function formatRiskSummary(riskTier, capabilityBuckets = []) {
-  const tier = String(riskTier || "low");
-  const label = `${tier[0]?.toUpperCase() || "L"}${tier.slice(1)} risk`;
-  return capabilityBuckets.length
-    ? `${label}: ${capabilityBuckets.join(", ")}`
-    : label;
-}
-
-function policyHasBlockingGate(policyMatrix = {}, options = {}) {
-  const { ignoredGates = [] } = options;
-  const ignored = new Set(ignoredGates);
-  return Object.entries(policyMatrix || {}).some(
-    ([name, gate]) => gate?.status === "block" && !ignored.has(name),
-  );
-}
-
-function textMatchesAny(values = [], patterns = []) {
-  const text = values.flat().filter(Boolean).join("\n");
-  return patterns.some((pattern) => pattern.test(text));
-}
-
-function submissionLooksPromotional({ report, risk }) {
-  const classificationIds = new Set(
-    (risk.classificationWarnings || []).map((warning) => warning.id),
-  );
-  if (
-    classificationIds.has("tools_category_routing") ||
-    classificationIds.has("tools_listing_metadata_missing")
-  ) {
-    return true;
-  }
-
-  return textMatchesAny(
-    [
-      report?.errors || [],
-      report?.warnings || [],
-      risk.reviewFlags?.map((flag) => flag.summary) || [],
-    ],
-    [
-      /tools\/app listing flow/i,
-      /paid listing/i,
-      /affiliate\/referral/i,
-      /hosted tool\/app\/service\/product/i,
-    ],
-  );
-}
-
-function submissionLooksBlocked({ report, risk }) {
-  if (
-    policyHasBlockingGate(risk.policyMatrix, {
-      ignoredGates: ["schema", "source", "quality"],
-    })
-  ) {
-    return true;
-  }
-  if (risk.riskTier === "critical") return true;
-
-  return textMatchesAny(
-    [
-      report?.errors || [],
-      report?.warnings || [],
-      risk.reviewFlags?.map((flag) => flag.id) || [],
-    ],
-    [
-      /local \/downloads hosting/i,
-      /community.*(?:zip|mcpb|archive|package)/i,
-      /community_local_download_request/i,
-      /community_archive_download/i,
-      /unsafe packageverified/i,
-      /forbidden \/downloads/i,
-    ],
-  );
-}
-
-function submissionTriageGroup({ report, risk, status }) {
-  if (status === "skipped") return "skipped";
-  if (status === "close_eligible") return "close_eligible";
-  if (status === "stale_reminder_due") return "stale";
-  if (submissionLooksBlocked({ report, risk })) return "blocked";
-  if (status === "import_ready" && risk.riskTier === "high") return "blocked";
-  if (submissionLooksPromotional({ report, risk })) {
-    return "likely_promo_spam";
-  }
-  if (status === "needs_author_input") return "needs_author_input";
-  if (status === "source_needs_verification") return "source_verification";
-  if (status === "import_ready") return "ready";
-  return "maintainer_review";
-}
-
-function submissionTriageReason({ entry, report, risk }) {
-  if (entry.triageGroup === "ready") {
-    return entry.autoImportEligible
-      ? "Deterministic gates passed; maintainer approval is still required before import."
-      : "Schema passed and the submission is ready for maintainer review.";
-  }
-  if (entry.triageGroup === "blocked") {
-    if (entry.status === "import_ready" && risk.riskTier === "high") {
-      return "High-risk import-ready submissions require manual maintainer risk review before import.";
-    }
-    const blockedGate = Object.entries(risk.policyMatrix || {}).find(
-      ([, gate]) => gate?.status === "block",
-    );
-    if (blockedGate) {
-      return `${blockedGate[0]} gate is blocking: ${blockedGate[1]?.summary || "review required"}`;
-    }
-    return "A deterministic policy or package safety blocker must be resolved first.";
-  }
-  if (entry.triageGroup === "likely_promo_spam") {
-    return "This looks like a hosted product, paid placement, affiliate, or tools listing flow rather than free community content.";
-  }
-  if (entry.triageGroup === "needs_author_input") {
-    return "Required schema fields or category metadata are missing or invalid.";
-  }
-  if (entry.triageGroup === "source_verification") {
-    return "Maintainers need to verify the canonical source, docs, package, or repository.";
-  }
-  if (entry.triageGroup === "stale") {
-    return "Author input has been pending long enough for a reminder.";
-  }
-  if (entry.triageGroup === "close_eligible") {
-    return "Author input has been pending past the close window.";
-  }
-  if (report?.skipped) {
-    return "The issue does not resolve cleanly to a supported submission category.";
-  }
-  return "Maintainer judgment is required before this can progress.";
-}
-
-function firstSubmissionSourceUrl(fields = {}) {
-  return (
-    normalizeValue(fields.github_url) ||
-    normalizeValue(fields.docs_url) ||
-    normalizeValue(fields.source_url) ||
-    normalizeValue(fields.download_url) ||
-    normalizeValue(fields.website_url) ||
-    ""
-  );
-}
-
-function buildSubmissionReviewChecklist({
-  report,
-  risk,
-  status,
-  sourceNeedsVerification,
-  maintainerActions,
-}) {
-  const items = [];
-  if (report?.skipped) {
-    items.push("Confirm whether this is a supported HeyClaude category.");
-  } else {
-    items.push("Confirm the category, slug, and public-facing metadata.");
-  }
-  if (!report?.ok) {
-    items.push("Wait for the author to fix required fields before import.");
-  }
-  if (sourceNeedsVerification) {
-    items.push(
-      "Verify the canonical source, docs, repository, or package URL.",
-    );
-  }
-  if (risk.riskTier === "high" || risk.riskTier === "critical") {
-    items.push(
-      "Review high-risk permissions, auth, local data, or payment scope.",
-    );
-  } else if (risk.riskTier === "medium") {
-    items.push("Review medium-risk capability and source signals.");
-  }
-  for (const action of maintainerActions) {
-    if (!items.includes(action)) items.push(action);
-  }
-  if (status === "import_ready") {
-    if (risk.policyDecision === "auto_import_eligible") {
-      items.push(
-        "Auto-import may open a PR after gates pass; maintainer review still gates merge.",
-      );
-    } else {
-      items.push(
-        "Apply import-approved only after source and category review.",
-      );
-    }
-  }
-  return items.slice(0, 7);
-}
-
-function buildSubmissionCommentDraft({ entry, report }) {
-  const title = entry.name || entry.title || "this submission";
-  if (entry.nextAction === "request_author_input") {
-    const problems = [...(report.errors || []), ...(report.warnings || [])]
-      .filter(Boolean)
-      .slice(0, 8)
-      .map((item) => `- ${item}`)
-      .join("\n");
-    return [
-      `Thanks for submitting ${title}. I can't continue review until the issue has the required metadata.`,
-      "",
-      problems ||
-        "- Please update the issue body with the required fields from the category template.",
-      "",
-      "Please edit the issue body with the missing details. Once it is updated, the validator can re-check it and maintainer review can continue.",
-    ].join("\n");
-  }
-  if (entry.nextAction === "verify_source") {
-    return [
-      `Thanks for submitting ${title}. This needs source verification before it can be imported.`,
-      "",
-      "Please make sure the issue includes the canonical GitHub repository, documentation URL, package URL, or other official source maintainers should review.",
-    ].join("\n");
-  }
-  if (entry.nextAction === "send_stale_reminder") {
-    return [
-      `This submission is still waiting on author input before review can continue.`,
-      "",
-      "Please update the issue with the missing details. If there is no update after the stale window, maintainers may close it as not planned. You can reopen or resubmit when the details are ready.",
-    ].join("\n");
-  }
-  if (entry.nextAction === "close_stale") {
-    return [
-      "Closing this submission as not planned because it has been waiting on required author input past the stale window.",
-      "",
-      "You can reopen or resubmit when the missing fields or source details are ready.",
-    ].join("\n");
-  }
-  return "";
-}
-
-export function buildSubmissionQueue(issues = [], options = {}) {
-  const entries = issues
-    .filter(looksLikeSubmissionIssue)
-    .map((issue) => {
-      const report = validateSubmission(issue);
-      const risk = analyzeIssueSubmissionRisk(issue, report);
-      const status = submissionQueueStatus(report, issue, options);
-      const staleState = submissionStaleState(issue, report, options);
-      const contributorReview =
-        risk.contributorAnalysis?.reviewSignals?.slice(0, 4) || [];
-      const capabilityBuckets =
-        risk.contributionAnalysis?.capabilityRiskBuckets || [];
-      const maintainerActions =
-        risk.contributionAnalysis?.maintainerActionItems || [];
-      const recommendedLabels = recommendedSubmissionLabels(issue, report);
-      const labels = issueLabels(issue);
-      const missingLabels = recommendedLabels.filter(
-        (label) => !labels.includes(label),
-      );
-      const nextAction = submissionQueueNextAction(
-        status,
-        issue,
-        risk.riskTier,
-        risk.policyDecision,
-      );
-      const sourceNeedsVerification = submissionSourceNeedsVerification(
-        report,
-        issue,
-      );
-      const entry = {
-        number: issue.number ?? null,
-        title: String(issue.title || ""),
-        url: String(issue.url || ""),
-        author:
-          typeof issue.author === "string"
-            ? issue.author
-            : String(issue.author?.login || ""),
-        updatedAt: String(issue.updatedAt || issue.updated_at || ""),
-        labels,
-        recommendedLabels,
-        missingLabels,
-        status,
-        nextAction,
-        staleState,
-        ageDays: submissionAgeDays(issue, options),
-        sourceNeedsVerification,
-        riskTier: risk.riskTier,
-        riskFlags: risk.reviewFlags.map((flag) => flag.id),
-        riskSummary: formatRiskSummary(risk.riskTier, capabilityBuckets),
-        policyMatrix: risk.policyMatrix || {},
-        policyDecision: risk.policyDecision || "maintainer_review",
-        autoImportEligible: risk.policyDecision === "auto_import_eligible",
-        contributorReview,
-        sourceState: risk.contributionAnalysis?.sourceState || "unknown",
-        maintainerActions,
-        riskRecommendedAction: risk.recommendedAction,
-        actionDue:
-          status === "close_eligible"
-            ? "close"
-            : status === "stale_reminder_due"
-              ? "remind"
-              : status === "needs_author_input"
-                ? "author_input"
-                : status === "source_needs_verification"
-                  ? "verify_source"
-                  : "",
-        category: report.category || "",
-        slug: report.fields?.slug || "",
-        name: report.fields?.name || "",
-        sourceUrl: firstSubmissionSourceUrl(report.fields),
-        sourceUrls: risk.contributionAnalysis?.sourceUrls?.slice(0, 5) || [],
-        contributorContext: {
-          login: risk.contributorAnalysis?.login || "",
-          profileUrl: risk.contributorAnalysis?.profileUrl || "",
-          resolutionStatus:
-            risk.contributorAnalysis?.resolutionStatus || "unresolved",
-          accountAgeDays: risk.contributorAnalysis?.accountAgeDays ?? null,
-          publicRepos: risk.contributorAnalysis?.publicRepos ?? null,
-          signals: contributorReview,
-          warnings: risk.contributorAnalysis?.warnings || [],
-        },
-        policyReasons: Object.entries(risk.policyMatrix || {}).map(
-          ([name, gate]) => ({
-            name,
-            status: gate?.status || "unknown",
-            summary: gate?.summary || "",
-            detail: gate?.detail || [],
-          }),
-        ),
-        errors: report.errors || [],
-        warnings: report.warnings || [],
-        importPath:
-          status === "import_ready" && report.category && report.fields?.slug
-            ? `content/${report.category}/${report.fields.slug}.mdx`
-            : "",
-      };
-      entry.triageGroup = submissionTriageGroup({ report, risk, status });
-      entry.triageReason = submissionTriageReason({ entry, report, risk });
-      entry.reviewChecklist = buildSubmissionReviewChecklist({
-        report,
-        risk,
-        status,
-        sourceNeedsVerification,
-        maintainerActions,
-      });
-      entry.commentDraft = buildSubmissionCommentDraft({ entry, report });
-      return entry;
-    })
-    .sort((left, right) => {
-      const statusOrder = {
-        import_ready: 0,
-        maintainer_review: 1,
-        close_eligible: 2,
-        stale_reminder_due: 3,
-        needs_author_input: 4,
-        source_needs_verification: 5,
-        skipped: 6,
-      };
-      return (
-        (statusOrder[left.status] ?? 99) - (statusOrder[right.status] ?? 99) ||
-        right.updatedAt.localeCompare(left.updatedAt) ||
-        Number(left.number ?? 0) - Number(right.number ?? 0)
-      );
-    });
-
-  return {
-    schemaVersion: 3,
-    kind: "submission-queue",
-    generatedAt: new Date().toISOString(),
-    count: entries.length,
-    summary: {
-      ready: entries.filter((entry) => entry.triageGroup === "ready").length,
-      blocked: entries.filter((entry) => entry.triageGroup === "blocked")
-        .length,
-      likelyPromoSpam: entries.filter(
-        (entry) => entry.triageGroup === "likely_promo_spam",
-      ).length,
-      stale: entries.filter((entry) => entry.triageGroup === "stale").length,
-      importReady: entries.filter((entry) => entry.status === "import_ready")
-        .length,
-      maintainerReview: entries.filter(
-        (entry) => entry.status === "maintainer_review",
-      ).length,
-      needsAuthorInput: entries.filter(
-        (entry) => entry.status === "needs_author_input",
-      ).length,
-      sourceNeedsVerification: entries.filter(
-        (entry) => entry.sourceNeedsVerification,
-      ).length,
-      staleReminderDue: entries.filter(
-        (entry) => entry.status === "stale_reminder_due",
-      ).length,
-      closeEligible: entries.filter(
-        (entry) => entry.status === "close_eligible",
-      ).length,
-      highRisk: entries.filter(
-        (entry) => entry.riskTier === "high" || entry.riskTier === "critical",
-      ).length,
-      needsChanges: entries.filter((entry) =>
-        [
-          "needs_author_input",
-          "source_needs_verification",
-          "stale_reminder_due",
-          "close_eligible",
-        ].includes(entry.status),
-      ).length,
-      skipped: entries.filter((entry) => entry.status === "skipped").length,
-    },
-    entries,
-  };
-}
-
-export function validateSubmission(issue) {
-  const labels = issueLabels(issue);
-  const fields = parseIssueFormBody(issue.body ?? "");
+export function validateSubmission(draft) {
+  const fields = parseSubmissionPrBody(draft.body ?? "");
   const categoryFromField = normalizeCategory(fields.category);
-  const categoryFromLabels =
-    labels
-      .map(normalizeCategory)
-      .find((category) => CORE_CATEGORIES.includes(category)) ?? "";
-  const category = categoryFromLabels || categoryFromField;
+  const category = categoryFromField;
   const warnings = [];
 
   if (fields.slug && fields.slug !== normalizeValue(fields.slug)) {
@@ -1420,6 +866,12 @@ export function validateSubmission(issue) {
     }
   }
 
+  if (normalizeValue(fields.affiliate_url) && category !== TOOLS_CATEGORY) {
+    errors.push(
+      "Contributor submissions cannot include affiliate_url outside maintainer-reviewed tools listings",
+    );
+  }
+
   if (category === "skills" && isGitHubSourcePath(fields.download_url)) {
     errors.push(
       "download_url must point to a package, archive, or release download; use github_url or retrieval_sources for GitHub source tree/blob paths",
@@ -1430,7 +882,7 @@ export function validateSubmission(issue) {
     errors.push("brand_domain must be a canonical domain such as asana.com");
   }
 
-  const productLike = looksLikeToolAppListing(fields, issue.body ?? "");
+  const productLike = looksLikeToolAppListing(fields, draft.body ?? "");
   if (category !== TOOLS_CATEGORY && productLike) {
     errors.push(
       `${toolListingRoutingMessage()}. Change the category to tools for maintainer-reviewed editorial listing prep, or submit the tools/app lead form instead.`,
@@ -1438,10 +890,6 @@ export function validateSubmission(issue) {
   }
 
   if (category === TOOLS_CATEGORY) {
-    if (!hasProtectedSubmissionLabel(issue)) {
-      errors.push(toolListingApprovalMessage());
-    }
-
     const missingToolFields = missingToolListingReviewFields(fields);
     for (const field of missingToolFields) {
       errors.push(`Tools listings require ${field}`);

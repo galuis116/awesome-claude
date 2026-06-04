@@ -1,10 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createApiFileRoute } from "@/lib/api/file-route";
 
-import { normalizeBrandDomain } from "@heyclaude/registry";
+import { normalizeBrandDomain } from "@heyclaude/registry/brand-assets";
 
 import { brandAssetParamsSchema } from "@/lib/api/contracts";
 import { apiError, createApiHandler, type InferApiParams } from "@/lib/api/router";
-import { getEnvString } from "@/lib/cloudflare-env";
+import { getEnvString } from "@/lib/cloudflare-env.server";
 import { applySecurityHeaders } from "@/lib/security-headers";
 
 const CACHE_CONTROL = "public, max-age=86400, stale-while-revalidate=604800";
@@ -166,8 +166,7 @@ export const GET = createApiHandler("brandAsset.read", async ({ params, requestI
   });
 });
 
-// @ts-ignore Generated API route is added to routeTree during Vite build.
-export const Route = createFileRoute("/api/brand-assets/$kind/$domain")({
+export const Route = createApiFileRoute("/api/brand-assets/$kind/$domain")({
   server: {
     handlers: {
       GET: async ({ request, params }) => GET(request, { params }),

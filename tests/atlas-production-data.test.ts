@@ -4,9 +4,10 @@ import { describe, expect, it } from "vitest";
 
 import { ARTIFACT_CONTRACTS } from "@/data/changelog";
 import { ECOSYSTEM_FEEDS } from "@/data/ecosystem-feeds";
-import { ENTRIES } from "@/data/entries";
+import { BEST_LISTS, ENTRIES, WEEKLY_BRIEF } from "@/data/entries";
 import { getIntegration } from "@/data/integrations";
 import { PLATFORM_MATRIX } from "@/data/platforms";
+import { seoClusterDefinitions } from "@/data/seo-cluster-definitions";
 import { REVIEW_COVERAGE, REVIEW_SUMMARY } from "@/data/validators";
 import { repoRoot } from "./helpers/registry-fixtures";
 
@@ -84,5 +85,75 @@ describe("Atlas production data wiring", () => {
       fs.readFileSync(path.join(repoRoot, "packages/mcp/package.json"), "utf8"),
     ) as { version: string };
     expect(getIntegration("mcp-server")?.version).toBe(packageJson.version);
+  });
+
+  it("keeps generated best lists and weekly brief backed by registry entries", () => {
+    const entryRefs = new Set(
+      ENTRIES.map((entry) => `${entry.category}/${entry.slug}`),
+    );
+    expect(BEST_LISTS.length).toBeGreaterThanOrEqual(20);
+    expect(BEST_LISTS.map((list) => list.slug)).toContain(
+      "agent-workflow-starter-kits",
+    );
+    expect(BEST_LISTS.map((list) => list.slug).sort()).toEqual(
+      seoClusterDefinitions.map((definition) => definition.slug).sort(),
+    );
+
+    const definitionsBySlug = new Map(
+      seoClusterDefinitions.map((definition) => [definition.slug, definition]),
+    );
+    for (const list of BEST_LISTS) {
+      const definition = definitionsBySlug.get(list.slug);
+      expect(definition, list.slug).toBeTruthy();
+      expect(list.picks.length, list.slug).toBeGreaterThan(0);
+      expect(list.picks.length, list.slug).toBeLessThanOrEqual(
+        definition!.itemLimit,
+      );
+      expect(list.seoDescription).toBe(definition!.seoDescription);
+      for (const pick of list.picks) {
+        expect(entryRefs.has(pick.ref), `${list.slug}:${pick.ref}`).toBe(true);
+        const entry = ENTRIES.find(
+          (candidate) => `${candidate.category}/${candidate.slug}` === pick.ref,
+        );
+        expect(entry, `${list.slug}:${pick.ref}`).toBeTruthy();
+        expect(definition!.categories).toContain(entry!.category);
+        if (definition!.requireSource) {
+          expect(entry!.source, `${list.slug}:${pick.ref}`).not.toBe(
+            "unverified",
+          );
+        }
+        if (definition!.requireInstallTrust) {
+          const hasInstallSurface = Boolean(
+            entry!.installCommand ||
+            entry!.configSnippet ||
+            entry!.downloadUrl ||
+            entry!.fullCopy,
+          );
+          const hasTrustedInstall = Boolean(
+            entry!.packageVerified ||
+            entry!.trust === "trusted" ||
+            entry!.source === "first-party" ||
+            entry!.source === "source-backed",
+          );
+          expect(hasInstallSurface, `${list.slug}:${pick.ref}`).toBe(true);
+          expect(hasTrustedInstall, `${list.slug}:${pick.ref}`).toBe(true);
+        }
+      }
+    }
+
+    expect(
+      fs.existsSync(path.join(repoRoot, "apps/web/src/lib/seo-clusters.ts")),
+    ).toBe(false);
+
+    for (const section of [
+      WEEKLY_BRIEF.newEntries,
+      WEEKLY_BRIEF.trustedInstalls,
+      WEEKLY_BRIEF.sourceBackedPicks,
+    ]) {
+      expect(section.length).toBeGreaterThan(0);
+      for (const item of section) {
+        expect(entryRefs.has(item.ref), item.ref).toBe(true);
+      }
+    }
   });
 });

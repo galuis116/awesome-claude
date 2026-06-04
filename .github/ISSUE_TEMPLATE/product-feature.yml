@@ -7,7 +7,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Use this template for maintainer-authored product and feature work. Do not use it for free content submissions; use the category-specific submission forms instead.
+        Use this template for maintainer-authored product and feature work. Do not use it for free content submissions; use the PR-first submission flow instead.
 
         Good issues are narrow enough for one PR, explicit about what is out of scope, and clear about the proof required before merge.
   - type: textarea
@@ -50,7 +50,7 @@ body:
       placeholder: |
         - apps/web/src/routes/browse.tsx
         - apps/web/src/components/resource-card.tsx
-        - apps/web/src/mocks/search.ts
+        - apps/web/src/data/search.ts
         - focused tests
     validations:
       required: true
@@ -111,4 +111,6 @@ body:
         - label: PRs should use a Conventional Commit-style title and include `Closes #<issue>`.
           required: true
         - label: UI or page changes must include screenshots in the PR, or explain `No visual impact`.
+          required: true
+        - label: This is product/feature work, not a content PR; do not route it through the content gate.
           required: true

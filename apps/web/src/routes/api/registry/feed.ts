@@ -1,7 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createApiFileRoute } from "@/lib/api/file-route";
 
 import { createApiHandler } from "@/lib/api/router";
-import { getCategorySummaries, getRegistryManifest } from "@/lib/content";
+import { getCategorySummaries, getRegistryManifest } from "@/lib/content.server";
 import { cachedJsonResponse } from "@/lib/http-cache";
 import { siteConfig } from "@/lib/site";
 
@@ -44,7 +44,7 @@ export const GET = createApiHandler("registry.feed", async ({ request }) => {
       registryEntries:
         "Search results, sharded feeds, and entry details expose factual trustSignals when source/checksum/compatibility data exists.",
       writes:
-        "Registry publishing is not exposed through the public API; submissions create reviewable GitHub issues only.",
+        "Registry publishing is not exposed through the public API; submissions are routed through PR-first private-gate review only.",
     },
     artifacts: manifest.artifacts,
     artifactContracts: manifest.artifactContracts,
@@ -54,8 +54,7 @@ export const GET = createApiHandler("registry.feed", async ({ request }) => {
   });
 });
 
-// @ts-ignore Generated API route is added to routeTree during Vite build.
-export const Route = createFileRoute("/api/registry/feed")({
+export const Route = createApiFileRoute("/api/registry/feed")({
   server: {
     handlers: {
       GET: async ({ request, params }) => GET(request, { params }),

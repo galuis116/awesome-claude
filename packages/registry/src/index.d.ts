@@ -16,6 +16,22 @@ export type ContentHeading = {
   id: string;
 };
 
+export type SafeFrontmatterParseResult = {
+  data: Record<string, unknown>;
+  content: string;
+  excerpt?: string;
+  language?: string;
+  matter?: string;
+  error?: unknown;
+};
+
+export declare const UNSAFE_FRONTMATTER_LANGUAGE_ERROR: string;
+
+export declare function parseSafeFrontmatter(
+  value: unknown,
+  options?: { fallbackOnError?: boolean },
+): SafeFrontmatterParseResult;
+
 export type ContentCollectionItem = {
   slug: string;
   category: string;
@@ -61,8 +77,48 @@ export type EntryTrustSignals = {
   sourceStatus: "available" | "missing" | string;
   lastVerifiedAt: string;
   adapterGenerated: boolean;
+  hasSafetyNotes: boolean;
+  hasPrivacyNotes: boolean;
   platforms: string[];
   supportLevels: string[];
+};
+
+export type RegistryRelationType =
+  | "same-project"
+  | "collection-member"
+  | "works-with"
+  | "extends"
+  | "alternative"
+  | "related";
+
+export type RegistryRelation = {
+  key: string;
+  category: string;
+  slug: string;
+  title: string;
+  relation: RegistryRelationType;
+  score: number;
+  reasons: string[];
+  url: string;
+};
+
+export type RegistryRelationGraphEntry = {
+  key: string;
+  category: string;
+  slug: string;
+  title: string;
+  url: string;
+  related: RegistryRelation[];
+};
+
+export type RegistryRelationGraph = {
+  schemaVersion: number;
+  kind: "registry-relation-graph";
+  generatedAt: string;
+  relationTypes: RegistryRelationType[];
+  maxRelationsPerEntry: number;
+  count: number;
+  entries: RegistryRelationGraphEntry[];
 };
 
 export type RegistryTrustReportEntry = {
@@ -168,8 +224,8 @@ export type ContentEntry = {
   submittedBy?: string;
   submittedByUrl?: string;
   submittedAt?: string;
-  submissionIssueNumber?: number;
-  submissionIssueUrl?: string;
+  sourceSubmissionNumber?: number;
+  sourceSubmissionUrl?: string;
   importPrNumber?: number;
   importPrUrl?: string;
   reviewedBy?: string;
@@ -247,17 +303,33 @@ export type ContentEntry = {
   llmsUrl?: string;
   apiUrl?: string;
   trustSignals?: EntryTrustSignals;
+  relatedEntries?: RegistryRelation[];
 };
 
 export type DirectoryEntry = Omit<
   ContentEntry,
-  "body" | "sections" | "headings" | "codeBlocks" | "scriptBody"
+  | "body"
+  | "sections"
+  | "headings"
+  | "codeBlocks"
+  | "scriptBody"
+  | "copySnippet"
+  | "usageSnippet"
+  | "configSnippet"
 > & {
   body?: string;
   sections?: ContentSection[];
   headings?: ContentHeading[];
   codeBlocks?: ContentCodeBlock[];
   scriptBody?: string;
+  copySnippet?: string;
+  usageSnippet?: string;
+  configSnippet?: string;
+  hasCopySnippet?: boolean;
+  hasUsageSnippet?: boolean;
+  hasConfigSnippet?: boolean;
+  hasScriptBody?: boolean;
+  installable?: boolean;
 };
 
 export type CategorySummary = {
@@ -504,33 +576,21 @@ export type SubmissionFieldSpec = {
   options?: string[];
 };
 
-export type IssueTemplateSpec = {
-  schemaVersion: number;
-  category: string;
-  template?: string;
-  labels: string[];
-  title: string;
-  fields: SubmissionFieldSpec[];
-};
-
-export type SubmissionIssueDraft = {
+export type SubmissionPrDraft = {
   title: string;
   body: string;
-  labels: string[];
 };
 
 export function normalizeSubmissionPayloadFields(
   fields?: Record<string, unknown>,
 ): Record<string, string>;
-export function buildSubmissionIssueTitle(
+export function buildSubmissionPrTitle(
   fields?: Record<string, unknown>,
 ): string;
-export function buildSubmissionIssueBody(
+export function buildSubmissionPrBody(fields?: Record<string, unknown>): string;
+export function buildSubmissionPrDraft(
   fields?: Record<string, unknown>,
-): string;
-export function buildSubmissionIssueDraft(
-  fields?: Record<string, unknown>,
-): SubmissionIssueDraft;
+): SubmissionPrDraft;
 
 export type SubmissionValidationReport = {
   ok: boolean;
@@ -579,8 +639,8 @@ export type SubmissionContentProvenance = {
   filename: string;
   submittedBy?: string;
   submittedByUrl?: string;
-  submissionIssueNumber?: number | null;
-  submissionIssueUrl?: string;
+  sourceSubmissionNumber?: number | null;
+  sourceSubmissionUrl?: string;
   importPrNumber?: number | null;
   importPrUrl?: string;
 };
@@ -640,7 +700,7 @@ export type SubmissionPolicyMatrix = Record<
 >;
 
 export type SubmissionPolicyDecision =
-  | "auto_import_eligible"
+  | "submit_pr_eligible"
   | "maintainer_review"
   | "blocked";
 
@@ -674,106 +734,6 @@ export type SubmissionRiskReport = {
   labelDefinitions: Record<string, { color: string; description: string }>;
 };
 
-export type SubmissionQueueEntry = {
-  number: number | null;
-  title: string;
-  url: string;
-  author: string;
-  updatedAt: string;
-  labels: string[];
-  recommendedLabels: string[];
-  missingLabels: string[];
-  status:
-    | "import_ready"
-    | "maintainer_review"
-    | "needs_author_input"
-    | "source_needs_verification"
-    | "stale_reminder_due"
-    | "close_eligible"
-    | "skipped";
-  nextAction:
-    | "import"
-    | "review_risk"
-    | "verify_source"
-    | "request_author_input"
-    | "send_stale_reminder"
-    | "close_stale"
-    | "skip";
-  triageGroup:
-    | "ready"
-    | "blocked"
-    | "needs_author_input"
-    | "source_verification"
-    | "likely_promo_spam"
-    | "stale"
-    | "close_eligible"
-    | "maintainer_review"
-    | "skipped";
-  triageReason: string;
-  staleState: "not_applicable" | "fresh" | "reminder_due" | "close_eligible";
-  ageDays: number;
-  sourceNeedsVerification: boolean;
-  riskTier: SubmissionRiskTier;
-  riskFlags: string[];
-  riskSummary: string;
-  policyMatrix: SubmissionPolicyMatrix;
-  policyDecision: SubmissionPolicyDecision;
-  autoImportEligible: boolean;
-  contributorReview: string[];
-  sourceState: SubmissionContributionAnalysis["sourceState"];
-  maintainerActions: string[];
-  riskRecommendedAction: string;
-  actionDue: "" | "author_input" | "verify_source" | "remind" | "close";
-  category: string;
-  slug: string;
-  name: string;
-  sourceUrl: string;
-  sourceUrls: string[];
-  contributorContext: {
-    login: string;
-    profileUrl: string;
-    resolutionStatus: string;
-    accountAgeDays: number | null;
-    publicRepos: number | null;
-    signals: string[];
-    warnings: string[];
-  };
-  policyReasons: Array<{
-    name: string;
-    status: string;
-    summary: string;
-    detail: string[];
-  }>;
-  errors: string[];
-  warnings: string[];
-  reviewChecklist: string[];
-  commentDraft: string;
-  importPath: string;
-};
-
-export type SubmissionQueue = {
-  schemaVersion: number;
-  kind: "submission-queue";
-  generatedAt: string;
-  count: number;
-  summary: {
-    ready: number;
-    blocked: number;
-    likelyPromoSpam: number;
-    stale: number;
-    importReady: number;
-    maintainerReview: number;
-    needsAuthorInput: number;
-    sourceNeedsVerification: number;
-    staleReminderDue: number;
-    closeEligible: number;
-    highRisk: number;
-    needsChanges: number;
-    skipped: number;
-  };
-  entries: SubmissionQueueEntry[];
-};
-
 export type JsonLdSnapshot = {
   key: string;
   category: string;
@@ -797,8 +757,8 @@ export type SearchDocument = {
   submittedBy?: string;
   submittedByUrl?: string;
   submittedAt?: string;
-  submissionIssueNumber?: number;
-  submissionIssueUrl?: string;
+  sourceSubmissionNumber?: number;
+  sourceSubmissionUrl?: string;
   importPrNumber?: number;
   importPrUrl?: string;
   reviewedBy?: string;
@@ -861,6 +821,62 @@ export type RegistryEnvelope<T> = {
   entries: T[];
 };
 
+export type WeeklyBriefItem = {
+  key: string;
+  category: string;
+  slug: string;
+  title: string;
+  description: string;
+  url: string;
+  dateAdded: string;
+  reasons: string[];
+  sourceUrls: string[];
+  safetyNotesCount: number;
+  privacyNotesCount: number;
+  downloadTrust: DownloadTrust;
+  packageVerified: boolean;
+};
+
+export type WeeklyBriefChange = {
+  key: string;
+  type: string;
+  category: string;
+  slug: string;
+  title: string;
+  url: string;
+  dateAdded: string;
+};
+
+export type WeeklyBrief = {
+  schemaVersion: number;
+  kind: "weekly-brief-draft";
+  generatedAt: string;
+  title: string;
+  period: {
+    days: number;
+    through: string;
+  };
+  summary: {
+    totalEntries: number;
+    newEntryCount: number;
+    sourceBackedCount: number;
+    saferInstallCount: number;
+    notableChangeCount: number;
+  };
+  sections: {
+    newEntries: WeeklyBriefItem[];
+    sourceBacked: WeeklyBriefItem[];
+    saferInstalls: WeeklyBriefItem[];
+    notableChanges: WeeklyBriefChange[];
+  };
+  publishPolicy: {
+    manualReviewRequired: true;
+    automatedPublishing: false;
+    popularityClaims: false;
+    privateScoringIncluded: false;
+  };
+};
+
 export const categorySpec: RegistryCategorySpec;
 export const registryCategorySpec: RegistryCategorySpec;
 export const ENTRY_SCHEMA_VERSION: number;
@@ -868,6 +884,7 @@ export const RAYCAST_SCHEMA_VERSION: number;
 export const REGISTRY_ARTIFACT_SCHEMA_VERSION: number;
 export const SITE_URL: string;
 export const RAYCAST_COPY_PREVIEW_LIMIT: number;
+export const WEEKLY_BRIEF_SCHEMA_VERSION: number;
 
 export function compactCount(value: number): string;
 export function parseAbbreviatedCount(value: unknown): number | null;
@@ -879,6 +896,20 @@ export function getCopyText(entry: Partial<DirectoryEntry>): string;
 export function getDistributionBadges(
   entry: Partial<DirectoryEntry>,
 ): DistributionBadge[];
+export type EntryAccessSummary = {
+  hasInstall: boolean;
+  hasConfig: boolean;
+  hasDownload: boolean;
+  hasDocs: boolean;
+  hasSource: boolean;
+  hasSafetyNotes: boolean;
+  hasPrivacyNotes: boolean;
+  hasPrerequisites: boolean;
+  copyOnly: boolean;
+};
+export function getEntryAccessSummary(
+  entry: Partial<DirectoryEntry>,
+): EntryAccessSummary;
 export function buildContentPromptArtifact(entries: ContentEntry[]): {
   schemaVersion: number;
   kind: string;
@@ -892,6 +923,7 @@ export function buildRegistryArtifactSet(
     siteUrl?: string;
     siteName?: string;
     siteDescription?: string;
+    relationLimit?: number;
   },
 ): Array<
   | {
@@ -911,6 +943,19 @@ export function buildSkillPlatformCompatibility(
 export function buildEntryTrustSignals(
   entry: Partial<ContentEntry>,
 ): EntryTrustSignals;
+export const REGISTRY_RELATION_TYPES: RegistryRelationType[];
+export function buildEntryRelations(
+  target: ContentEntry,
+  entries: ContentEntry[],
+  params?: { siteUrl?: string; limit?: number },
+): RegistryRelation[];
+export function buildRegistryRelationGraph(
+  entries: ContentEntry[],
+  params?: { siteUrl?: string; limit?: number; generatedAt?: string },
+): RegistryRelationGraph;
+export function relationLookupFromGraph(
+  graph: Partial<RegistryRelationGraph> | null | undefined,
+): Map<string, RegistryRelation[]>;
 export function buildRegistryTrustReport(
   entries: ContentEntry[],
 ): RegistryTrustReport;
@@ -1062,6 +1107,22 @@ export function buildPluginExportFeed(
 export function buildRegistryChangelogFeed(
   entries: ContentEntry[],
 ): Record<string, unknown>;
+export function buildWeeklyBrief(
+  entries: Partial<DirectoryEntry>[],
+  options?: {
+    generatedAt?: string;
+    days?: number;
+    siteUrl?: string;
+    limits?: Partial<{
+      newEntries: number;
+      sourceBacked: number;
+      saferInstalls: number;
+      notableChanges: number;
+    }>;
+    changelogEntries?: Array<Partial<DirectoryEntry> & { type?: string }>;
+  },
+): WeeklyBrief;
+export function renderWeeklyBriefMarkdown(brief: WeeklyBrief): string;
 export function buildArtifactEnvelope<T>(
   kind: string,
   entries: T[],
@@ -1091,11 +1152,88 @@ export function buildCorpusLlmsArtifact(
   params?: Record<string, unknown>,
 ): string;
 export const QUALITY_REPORT_SCHEMA_VERSION: number;
+export const SOURCE_HEALTH_REPORT_SCHEMA_VERSION: number;
 export const LLMS_ARTIFACT_SCHEMA_VERSION: number;
 export const SUBMISSION_SPEC_SCHEMA_VERSION: number;
+
+export type SourceHealthFreshness =
+  | "fresh"
+  | "aging"
+  | "stale"
+  | "dormant"
+  | "unknown";
+
+export type SourceHealthEntry = {
+  key: string;
+  category: string;
+  slug: string;
+  title: string;
+  sourceStatus: "available" | "missing";
+  sourceQuality: string;
+  freshness: SourceHealthFreshness;
+  ageDays: number | null;
+  lastActivityAt: string;
+  hasSafetyNotes: boolean;
+  hasPrivacyNotes: boolean;
+  packageTrust: DownloadTrust;
+  packageVerified: boolean;
+  hasPackageTrust: boolean;
+  riskBearing: boolean;
+  needsAttention: boolean;
+  attentionReasons: string[];
+};
+
+export type SourceHealthReport = {
+  schemaVersion: number;
+  kind: "source-health-report";
+  generatedAt: string;
+  count: number;
+  thresholds: {
+    freshMaxDays: number;
+    agingMaxDays: number;
+    staleMaxDays: number;
+  };
+  summary: {
+    sourceBackedCount: number;
+    sourceBackedPercent: number;
+    missingSourceCount: number;
+    freshCount: number;
+    agingCount: number;
+    staleCount: number;
+    dormantCount: number;
+    unknownFreshnessCount: number;
+    riskBearingCount: number;
+    missingSafetyNotesCount: number;
+    missingPrivacyNotesCount: number;
+    packageTrustCount: number;
+    packageTrustPercent: number;
+    needsAttentionCount: number;
+  };
+  categoryBreakdown: Record<
+    string,
+    {
+      count: number;
+      sourceBacked: number;
+      stale: number;
+      missingSafetyNotes: number;
+      missingPrivacyNotes: number;
+      packageTrust: number;
+      needsAttention: number;
+    }
+  >;
+  entries: SourceHealthEntry[];
+};
+
 export function buildSourceProvenance(
   entry: Partial<ContentEntry>,
 ): SourceProvenance;
+export function buildEntrySourceHealth(
+  entry: Partial<ContentEntry>,
+  referenceDate?: Date | string,
+): SourceHealthEntry;
+export function buildSourceHealthReport(
+  entries: Partial<ContentEntry>[],
+): SourceHealthReport;
 export function buildEntryQuality(
   entry: Partial<ContentEntry>,
   referenceDate?: Date | string,
@@ -1126,10 +1264,10 @@ export function buildSubmissionFieldModel(category: string): {
   template?: string;
   fields: SubmissionFieldSpec[];
 } | null;
-export function buildIssueTemplateSpec(
-  category: string,
-): IssueTemplateSpec | null;
-export function buildSubmissionSpecs(): Record<string, unknown>;
+export function buildSubmissionSpecs(options?: {
+  siteUrl?: string;
+  origin?: string;
+}): Record<string, unknown>;
 export const CATEGORY_SCHEMAS: Record<
   string,
   { required: string[]; recommended: string[] }
@@ -1165,76 +1303,16 @@ export function normalizeHeading(label: string): string;
 export function normalizeValue(value: unknown): string;
 export function slugify(value: unknown): string;
 export function normalizeCategory(value: unknown): string;
-export function parseIssueFormBody(body: string): Record<string, string>;
+export function parseSubmissionPrBody(body: string): Record<string, string>;
 export function normalizeParsedFields(
   fields: Record<string, string>,
 ): Record<string, string>;
-export function issueLabels(issue: Record<string, unknown>): string[];
-export function looksLikeSubmissionIssue(
-  issue: Record<string, unknown>,
-): boolean;
-export function isLikelyAffiliateUrl(value: unknown): boolean;
-export function recommendedSubmissionLabels(
-  issue: Record<string, unknown>,
-  report?: SubmissionValidationReport,
-): string[];
-export function hasProtectedSubmissionLabel(
-  issue?: Record<string, unknown>,
-): boolean;
-export function submissionSourceNeedsVerification(
-  report: SubmissionValidationReport,
-  issue?: Record<string, unknown>,
-): boolean;
-export function submissionAgeDays(
-  issue?: Record<string, unknown>,
-  options?: { now?: string },
-): number;
-export function submissionStaleState(
-  issue?: Record<string, unknown>,
-  report?: SubmissionValidationReport,
-  options?: { now?: string },
-): "not_applicable" | "fresh" | "reminder_due" | "close_eligible";
-export function submissionQueueStatus(
-  report: SubmissionValidationReport,
-  issue?: Record<string, unknown>,
-  options?: { now?: string },
-): string;
-export const SUBMISSION_BASE_LABELS: string[];
-export const COMMUNITY_CATEGORY_LABELS: Record<string, string>;
-export const SUBMISSION_NEEDS_AUTHOR_INPUT_LABEL: string;
-export const SUBMISSION_SOURCE_NEEDS_VERIFICATION_LABEL: string;
-export const SUBMISSION_STALE_LABEL: string;
-export const SUBMISSION_AUTO_IMPORT_ELIGIBLE_LABEL: string;
-export const SUBMISSION_RISK_LOW_LABEL: string;
-export const SUBMISSION_RISK_MEDIUM_LABEL: string;
-export const SUBMISSION_RISK_HIGH_LABEL: string;
-export const SUBMISSION_PROTECTED_REVIEW_LABELS: string[];
-export const SUBMISSION_MANAGED_VALIDATION_LABELS: string[];
-export const SUBMISSION_RISK_LABELS: string[];
-export const SUBMISSION_VALIDATION_LABEL_DEFINITIONS: Record<
-  string,
-  { color: string; description: string }
->;
-export const SUBMISSION_RISK_LABEL_DEFINITIONS: Record<
-  string,
-  { color: string; description: string }
->;
-export const SUBMISSION_STALE_POLICY: {
-  reminderDays: number;
-  closeDays: number;
-};
-export function submissionLabelsForCategory(category: string): string[];
-export function recommendedLabelsForCategory(category: string): string[];
-export function buildSubmissionQueue(
-  issues: Array<Record<string, unknown>>,
-  options?: { now?: string },
-): SubmissionQueue;
 export function validateSubmission(
-  issue: Record<string, unknown>,
+  draft: Record<string, unknown>,
 ): SubmissionValidationReport;
 export const SUBMISSION_RISK_SCHEMA_VERSION: number;
 export const SUBMISSION_RISK_COMMENT_MARKER: string;
-export function analyzeIssueSubmissionRisk(
+export function analyzeSubmissionDraftRisk(
   issue?: Record<string, unknown>,
   validationReport?: SubmissionValidationReport | null,
   options?: {

@@ -69,7 +69,7 @@ const COMMON: SpecField[] = [
     kind: "text",
     maxLen: 120,
     placeholder: "@github-handle or public email",
-    help: "This is copied into a public GitHub issue. Do not enter private contact details.",
+    help: "This may be copied into a public GitHub PR. Do not enter private contact details.",
   },
   { key: "tags", label: "Tags", kind: "tags", help: "Comma-separated, up to 8." },
 ];
@@ -311,64 +311,6 @@ export const SUBMISSION_SPEC: Record<Category, CategorySpec> = {
     webOnly: true,
     fields: [...COMMON],
   },
-  plugins: {
-    category: "plugins",
-    blurb:
-      "Cross-harness plugin bundles. This category is not yet issue-imported from the public website.",
-    riskBearing: true,
-    webOnly: true,
-    fields: [...COMMON],
-  },
-  automations: {
-    category: "automations",
-    blurb:
-      "Scheduled or event-triggered agent workflows. This category is not yet issue-imported from the public website.",
-    riskBearing: true,
-    webOnly: true,
-    fields: [...COMMON],
-  },
-  "codex-plugins": {
-    category: "codex-plugins",
-    blurb: "Legacy harness-prefixed category. Submit through GitHub if needed.",
-    riskBearing: true,
-    webOnly: true,
-    fields: [...COMMON],
-  },
-  "codex-automations": {
-    category: "codex-automations",
-    blurb: "Legacy harness-prefixed category. Submit through GitHub if needed.",
-    riskBearing: true,
-    webOnly: true,
-    fields: [...COMMON],
-  },
-  "harness-configs": {
-    category: "harness-configs",
-    blurb: "Legacy harness config category. Submit through GitHub if needed.",
-    riskBearing: true,
-    webOnly: true,
-    fields: [...COMMON],
-  },
-  "aider-recipes": {
-    category: "aider-recipes",
-    blurb: "Legacy Aider recipe category. Submit through GitHub if needed.",
-    riskBearing: false,
-    webOnly: true,
-    fields: [...COMMON],
-  },
-  "continue-configs": {
-    category: "continue-configs",
-    blurb: "Legacy Continue config category. Submit through GitHub if needed.",
-    riskBearing: false,
-    webOnly: true,
-    fields: [...COMMON],
-  },
-  "zed-extensions": {
-    category: "zed-extensions",
-    blurb: "Legacy Zed extension category. Submit through GitHub if needed.",
-    riskBearing: false,
-    webOnly: true,
-    fields: [...COMMON],
-  },
 };
 
 export interface PreflightIssue {
@@ -430,7 +372,10 @@ export function preflight(category: Category | "", data: Record<string, string>)
   return issues;
 }
 
-export function buildIssueDraft(category: Category | "", data: Record<string, string>): string {
+export function buildSubmissionPacket(
+  category: Category | "",
+  data: Record<string, string>,
+): string {
   const spec = category ? SUBMISSION_SPEC[category] : null;
   const fields = spec?.fields ?? COMMON;
   return fields

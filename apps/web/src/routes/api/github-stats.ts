@@ -1,10 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createApiFileRoute } from "@/lib/api/file-route";
 
 import { parseAbbreviatedCount } from "@heyclaude/registry/presentation";
 
 import { apiError, apiJson, createApiHandler } from "@/lib/api/router";
 import { logApiError, logApiInfo, logApiWarn, sample } from "@/lib/api-logs";
-import { getEnvString } from "@/lib/cloudflare-env";
+import { getEnvString } from "@/lib/cloudflare-env.server";
 import { siteConfig } from "@/lib/site";
 
 const GITHUB_API_VERSION = "2022-11-28";
@@ -121,8 +121,7 @@ export const GET = createApiHandler("githubStats.read", async ({ request, reques
   }
 });
 
-// @ts-ignore Generated API route is added to routeTree during Vite build.
-export const Route = createFileRoute("/api/github-stats")({
+export const Route = createApiFileRoute("/api/github-stats")({
   server: {
     handlers: {
       GET: async ({ request, params }) => GET(request, { params }),

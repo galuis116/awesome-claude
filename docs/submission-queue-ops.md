@@ -1,166 +1,129 @@
-# Submission Queue Operations
+# PR-First Submission Gate Operations
 
-HeyClaude content submissions stay issue-first and review-gated. The queue
-automation helps maintainers see which submissions are ready, blocked, or stale.
-Fully valid, source-backed, non-artifact submissions can be approved for an
-import PR after policy gates pass, but automation does not auto-merge or publish
-content.
+HeyClaude content submissions are PR-first. Public contributors submit exactly
+one raw `content/<category>/<slug>.mdx` entry through the website GitHub App flow
+or by opening a direct single-entry PR. They should not edit README, generated
+registry artifacts, public data, workflows, scripts, package metadata, or
+multiple entries.
+
+Public GitHub issue creation is disabled for content intake. The old public
+issue queue/import/stale-management scripts are not part of the supported
+submission path; website submissions must go through the private submission gate
+and GitHub PRs.
+
+The private maintainer gate owns final submission decisions: label immediately,
+review, post one stable marker comment, then `merge`, `close`, `manual`, or
+`ignore`. For single-file content PRs, the gate
+is intentionally one-shot and slightly aggressive: ambiguity usually closes the
+PR with a public reason so the contributor can resubmit cleanly.
 
 ## Labels
 
-- `content-submission`: canonical routing label for directory submissions.
-- `needs-review`: default state for newly-routed submissions.
-- `needs-author-input`: validation is blocked on missing or malformed fields.
-- `source-needs-verification`: the submitted source URL is missing, ambiguous,
-  unavailable, or otherwise needs maintainer review.
-- `stale-submission`: the issue has waited at least 7 days for author input.
-- `auto-import-eligible`: deterministic gates passed and a maintainer-approved
-  import PR may be opened. This is not approval to merge.
-- `accepted` / `import-approved`: maintainer-reviewed approval labels that can
-  open an import PR.
-- `import-pr-open`: an import PR exists; stale automation must not close it.
-- `risk-low` / `risk-medium` / `risk-high`: deterministic security/safety
-  review labels. They are advisory except when the report tier is `critical`,
-  which is produced by critical findings such as obvious malware, exposed
-  secrets, unsafe executable install pipelines, or non-HTTPS executable sources;
-  there is no separate `critical` label, and critical reports block the workflow
-  until fixed.
+- `submission-under-review`: the private worker accepted the webhook and queued
+  a serialized review job.
+- `submission-manual-review`: potentially useful, but source, provenance,
+  package, credentials, safety, or category-fit risk needs maintainer judgment.
+- `submission-closed-by-gate`: the worker closed a hard failure or
+  route-away submission.
+- `submission-merged-by-gate`: the worker approved and merged a passing
+  one-file content PR after public checks and private review.
 
 ## Policy Matrix
 
-Risk labels are triage hints. The import decision uses a policy matrix:
+Schema validity is only the first gate. Final decisions also consider:
 
-- `schema`: required fields and category model.
-- `source`: canonical source, docs, repository, or package URL.
-- `package`: local download, archive, installer, and quarantine policy.
-- `provenance`: original submitter and import attribution checks.
-- `capability`: auth, local data, external write, payment, destructive, malware,
-  or other capability signals.
-- `quality`: category fit and generated-artifact hygiene.
+- `category`: whether the entry belongs in the selected registry category.
+- `source`: canonical source, docs, repository, package, or project truth.
+- `duplicates`: existing registry entries, prior rejected submissions, and open
+  queue state.
+- `package`: installer, archive, local download, and package verification risk.
+- `provenance`: original submitter attribution and import ownership.
+- `capability`: auth, local data, external writes, destructive behavior,
+  payments, malware, or background automation.
+- `quality`: public copy hygiene, useful detail, non-promo tone, and generated
+  artifact scope.
 
-Policy decisions:
+Public preflight only returns broad hints: `submit_pr`, `fix_required`,
+`route_away`, or `manual_review`. Private corpus scoring and acceptance
+thresholds stay outside the public repo.
 
-- `auto_import_eligible`: schema passed, source/package/quality gates passed,
-  no blocking gate, and risk is low or medium.
-- `maintainer_review`: valid enough to review, but a warning gate or stronger
-  risk signal needs human judgment.
-- `blocked`: at least one policy gate blocks import.
+## Cloudflare Gate
 
-Safety/privacy disclosure affects the `quality` gate. If deterministic risk
-signals detect code execution, package install risk, destructive behavior,
-background automation, external writes, credentials, local data, telemetry, or
-third-party data handling, missing `safety_notes` / `privacy_notes` downgrades
-auto-import eligibility to maintainer review.
+The private gate is hosted as a Cloudflare Worker with supporting bindings:
 
-## Queue States
+- Production Worker: `heyclaude-submission-gate`.
+- Production domain: `submission-gate.heyclau.de`.
+- Production D1, R2, Queue, and dead-letter Queue resources are the only
+  supported submission-gate runtime moving forward.
+- Worker endpoints for GitHub App auth, draft creation, draft status, GitHub
+  webhooks, and review processing.
+- D1 tables for drafts, PR state, verdict summaries, audit rows, and short-lived
+  encrypted user-token handoff.
+- R2 for raw webhook payload snapshots, draft payloads, and review reports.
+- Queues for review jobs, with dead-letter queues.
+- Durable Objects for per-draft or per-PR locks.
+- D1 `submission_prs` is the durable maintainer review queue. Valid states are
+  `queued`, `validation_pending`, `reviewing`, `merge_pending`, `merged`,
+  `closed`, `manual`, `ignored`, and `error_retryable`.
+- A scheduled Worker sweeper runs every minute and requeues stale
+  `validation_pending`, `merge_pending`, and `error_retryable` rows so missed
+  GitHub check webhooks do not leave PRs stuck.
 
-- `import_ready`: schema-valid and ready for maintainer review/approval.
-- `maintainer_review`: protected by `accepted`, `import-approved`, or
-  `import-pr-open`.
-- `needs_author_input`: missing required fields or invalid submission data.
-- `source_needs_verification`: source/package URLs need review before import.
-- `stale_reminder_due`: invalid submission has been waiting 7+ days.
-- `close_eligible`: invalid submission has been waiting 14+ days and already
-  received the stale reminder label.
-- `skipped`: not a core submission category.
+Provision queues before deploying the Worker. The production environment needs
+`heyclaude-submission-review` and `heyclaude-submission-review-dlq`.
+The review consumer retries three times before the DLQ.
 
-## Workbench Fields
+Do not deploy the submission gate from unrelated feature branches. It owns the
+production custom domain.
 
-The public `/submissions` page is a read-only maintainer workbench backed by
-the same queue contract as CI. It can suggest actions, labels, and comments, but
-it must not comment on issues, close issues, approve imports, or publish
-content.
-
-Each queue entry includes:
-
-- `nextAction`: `import`, `review_risk`, `verify_source`,
-  `request_author_input`, `send_stale_reminder`, `close_stale`, or `skip`.
-- `missingLabels`: recommended queue labels not currently present on the
-  GitHub issue.
-- `reviewChecklist`: deterministic maintainer checks assembled from schema,
-  source, stale, and security/safety signals.
-- `commentDraft`: copyable maintainer reply text for author-input, source
-  verification, stale-reminder, and stale-close cases.
-- `policyMatrix`: explainable gate status for schema, source, package,
-  provenance, capability, and quality.
-- `policyDecision`: `auto_import_eligible`, `maintainer_review`, or `blocked`.
-- `autoImportEligible`: whether deterministic gates passed and the submission is
-  ready for maintainer-approved import.
-- `sourceUrl`: the first submitted GitHub, docs, source, download, or website
-  URL available for maintainer review.
-
-`nextAction=import` is not automatic merge approval. It means deterministic
-gates passed and a maintainer can explicitly approve the import PR path.
-Maintainers still review the generated PR before merge.
+The GitHub App needs read-only access to Checks and commit statuses so the gate
+can wait for repo-owned source validation before running private review. It
+should subscribe to `pull_request`, `check_run`,
+`check_suite`, and `status` events. Checks write access is not required unless
+the gate later creates its own formal GitHub check run.
 
 ## Automation
 
-- `Submission Queue` runs weekly and on demand. It writes a GitHub Actions
-  summary from `pnpm submission:queue`, including deterministic security/safety
-  tier and review flags for each submission-shaped issue.
-- `Submission Stale Manager` runs weekly and on demand. Manual dispatch defaults
-  to dry-run and does not accept runtime inputs. Scheduled runs can add labels,
-  upsert one reminder comment, and close only eligible stale submissions.
-- `Submission Issue Validation` posts one stable HeyClaude submission check
-  comment covering schema, dry-run import preview, and deterministic
-  security/safety review. The review checks URLs, install commands,
-  malware/abuse terms, suspicious executable paths, sensitive capability words,
-  contributor metadata, and source signals without executing submitted code. It
-  does not create branches, open PRs, or dispatch validation workflows from
-  public issue events. Regulated-domain status, category fit, and promotional
-  tone are not treated as security risk.
-- `HeyClaude Submission Bot` may label issues, keep the stable submission check
-  comment updated, and open import PRs only after a maintainer applies
-  `accepted` or `import-approved` and deterministic gates pass. It never
-  auto-approves, auto-merges, or publishes content.
-- `Package Artifact Scan` validates reviewed package archives with archive
-  safety limits and optional ClamAV, Trivy, and OSV-Scanner checks. Scans are
-  quarantine signals, not a warranty.
-- `validate-content-policy` runs inside `PR Validation` and enforces only
-  deterministic HeyClaude UGC blockers: category/path/frontmatter consistency,
-  generated-artifact churn from external contributors, community ZIP/MCPB or
-  `/downloads/**` hosting requests, unsafe `packageVerified: true`, provenance
-  failure, and missing required safety/privacy notes for sensitive behavior.
-  It emits concise annotations only when it fails.
-- Installed external security apps provide contributor and repo trust signals.
-  The Superagent Marketplace `Superagent Security Scan` is the required
-  contributor security layer. The local Superagent CLI workflow and Pipelock
-  remain advisory/manual unless maintainers deliberately promote them in branch
-  protection.
-- Product-shaped tools, hosted apps, services, SaaS products, subscriptions, and
-  sponsored/featured placement interest route through
-  `https://heyclau.de/tools/submit` unless a maintainer explicitly approves a
-  `content/tools` editorial entry.
-- Stale automation never imports content, creates PRs, or touches issues with
-  `accepted`, `import-approved`, or `import-pr-open`.
-- External contributor PRs cannot change `README.md`,
-  `apps/web/public/data/**`, `apps/web/src/generated/**`, or
-  `apps/web/public/downloads/**`.
+- Website `/submit` runs public preflight, then posts a draft to the private
+  Worker. If the Worker is configured, the contributor continues through GitHub
+  App user auth and the gate creates or updates a user-fork branch and PR.
+- Webhook review starts when a PR targets the configured content gate base ref,
+  currently `main`.
+- The Worker applies `submission-under-review` immediately, enqueues one job per
+  PR, and updates one stable marker comment.
+- The review job waits for configured required validation, currently
+  `validate-content` and Superagent. Pending validation keeps the PR in
+  `validation_pending`, updates the marker comment, and sets a retry time.
+  Failed validation gets one terminal comment and closes. Green source
+  validation is the only path into private corpus review.
+- Accepted one-file content PRs are merged directly. Generated artifacts are
+  build-time outputs and are not committed in contributor PRs.
+- `close` is for spam, promo/listing attempts, duplicates, unsupported
+  categories, generated-artifact tampering, unsafe package/install patterns,
+  missing source of truth, protected-field edits, or non-content PRs.
+- `manual` is rare and reserved for Superagent/private-review outages, merge
+  failures after retries, or genuinely close high-risk calls.
 
-## Maintainer Flow
+## Queue Debugging
 
-1. Review `/submissions` or the `Submission Queue` workflow summary.
-2. Use the filter tabs to focus on import-ready, author-input,
-   source-verification, stale, close-eligible, or high-risk submissions.
-3. Apply missing labels only when they match the current maintainer decision.
-4. For `needs_author_input`, use the copyable draft as a starting point and wait
-   for the author to update the issue.
-5. For `source_needs_verification`, verify canonical source/package URLs before
-   approving.
-6. For `stale_reminder_due`, let the manager add `stale-submission` and post the
-   reminder.
-7. For `close_eligible`, close as not planned only after the stale reminder has
-   already been applied.
-8. Apply `accepted` or `import-approved` only after maintainer source review and
-   when the deterministic gates indicate the issue is import-ready.
+Maintainers can inspect non-secret queue state through `GET /queue` with the
+internal bearer secret. The endpoint returns status counts and recent PR queue
+rows, including retry time, attempt count, last public-check summary, and last
+retryable error. Do not expose this endpoint publicly.
 
-Direct content PRs are allowed for advanced contributors, but they must pass the
-same content validation and deterministic content policy gate. External scanner
-findings are maintainer review signals unless branch protection is updated to
-require a specific app check.
-Direct product/app PRs belong under `content/tools/` and should include
-`websiteUrl`, `documentationUrl`, `pricingModel`, `disclosure`,
-`applicationCategory`, and `operatingSystem` before merge.
+## Legacy Issue Intake
 
-Authors can reopen or resubmit closed stale submissions when the missing fields
-or source details are ready.
+Issue-based content intake is retired. If an old submission issue is still open,
+close it with the PR-first resubmission route or convert it manually into a
+normal one-file content PR. Do not reintroduce public issue import, stale issue
+management, or queue mutation workflows.
+
+## Promotion Criteria
+
+- Zero actions outside content-gate scope.
+- No false auto-closes in regression fixtures or live batches.
+- Stable marker comments, labels, branches, and PRs across repeated events.
+- Successful direct merge for accepted one-file content PRs.
+- Clean validation before private review and merge.
+- `main` remains protected; only passing single-file content PRs can be merged by
+  the maintainer gate.

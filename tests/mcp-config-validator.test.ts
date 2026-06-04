@@ -96,6 +96,34 @@ describe("MCP config validator", () => {
     }
   });
 
+  it("redacts URL path and fragment secrets from remote URLs and args", () => {
+    const result = validateMcpConfigText(
+      JSON.stringify({
+        mcpServers: {
+          remoteWithPathSecret: {
+            url: "https://example.com/mcp/sk-PATHSECRET1234567890",
+          },
+          stdioWithFragmentSecret: {
+            command: "npx",
+            args: [
+              "-y",
+              "@example/mcp",
+              "https://example.com/mcp#access_token=sk-FRAGSECRET1234567890",
+            ],
+          },
+        },
+      }),
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.redactedSecretCount).toBe(2);
+    for (const output of [result.fixedConfigText, result.reportText]) {
+      expect(output).not.toContain("sk-PATHSECRET1234567890");
+      expect(output).not.toContain("sk-FRAGSECRET1234567890");
+      expect(output).toContain("${URL}");
+    }
+  });
+
   it("redacts malformed URL-like values that contain secrets", () => {
     const result = validateMcpConfigText(
       JSON.stringify({
@@ -316,5 +344,24 @@ describe("MCP config validator", () => {
       ]),
     );
     expect(JSON.parse(result.fixedConfigText)).toHaveProperty("mcpServers");
+  });
+
+  it("treats http://[::1] IPv6 loopback as localhost", () => {
+    const httpsWarning =
+      "Remote MCP URLs should use HTTPS unless they are localhost.";
+
+    const loopback = validateMcpConfigText(
+      JSON.stringify({
+        mcpServers: { local: { url: "http://[::1]:3000/sse" } },
+      }),
+    );
+    expect(loopback.warnings).not.toContain(`local: ${httpsWarning}`);
+
+    const remote = validateMcpConfigText(
+      JSON.stringify({
+        mcpServers: { remote: { url: "http://example.com:3000/sse" } },
+      }),
+    );
+    expect(remote.warnings).toContain(`remote: ${httpsWarning}`);
   });
 });

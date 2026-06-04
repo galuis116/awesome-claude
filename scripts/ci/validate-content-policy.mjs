@@ -253,6 +253,44 @@ function hostname(value) {
   }
 }
 
+function isLikelyAffiliateUrl(value) {
+  const raw = normalizeText(value);
+  if (!raw) return false;
+
+  try {
+    const url = new URL(raw);
+    const affiliateParams = new Set([
+      "aff",
+      "affiliate",
+      "affiliate_id",
+      "irclickid",
+      "partner",
+      "partner_id",
+      "ref",
+      "referral",
+      "referral_code",
+      "tag",
+      "via",
+    ]);
+
+    for (const key of url.searchParams.keys()) {
+      const normalizedKey = key.toLowerCase();
+      if (
+        affiliateParams.has(normalizedKey) ||
+        normalizedKey.startsWith("utm_aff")
+      ) {
+        return true;
+      }
+    }
+
+    return /\/(ref|refer|referral|affiliate|partners?)(?:\/|$)/i.test(
+      url.pathname,
+    );
+  } catch {
+    return /\b(affiliate|referral|ref=|via=)\b/i.test(raw);
+  }
+}
+
 function isArchivePackageUrl(value) {
   const pathname = urlPathname(value).toLowerCase();
   return [...ARCHIVE_PACKAGE_EXTENSIONS].some((extension) =>
@@ -321,9 +359,11 @@ function frontmatterFields(data = {}, category = "") {
     category: normalizeText(data.category || category),
     slug: normalizeText(data.slug),
     github_url: normalizeText(data.repoUrl),
+    source_url: normalizeText(data.sourceUrl),
     website_url: normalizeText(data.websiteUrl),
     docs_url: normalizeText(data.documentationUrl || data.projectUrl),
     download_url: normalizeText(data.downloadUrl),
+    affiliate_url: normalizeText(data.affiliateUrl),
     install_command: normalizeText(data.installCommand),
     usage_snippet: normalizeText(data.usageSnippet),
     full_copyable_content: normalizeText(data.copySnippet),
@@ -333,16 +373,16 @@ function frontmatterFields(data = {}, category = "") {
 }
 
 function frontmatterProvenance(data = {}) {
-  const submissionIssueNumber = Number(data.submissionIssueNumber);
+  const sourceSubmissionNumber = Number(data.sourceSubmissionNumber);
   const importPrNumber = Number(data.importPrNumber);
   return {
     submittedBy: normalizeText(data.submittedBy),
     submittedByUrl: normalizeText(data.submittedByUrl),
-    submissionIssueNumber:
-      Number.isInteger(submissionIssueNumber) && submissionIssueNumber > 0
-        ? submissionIssueNumber
+    sourceSubmissionNumber:
+      Number.isInteger(sourceSubmissionNumber) && sourceSubmissionNumber > 0
+        ? sourceSubmissionNumber
         : null,
-    submissionIssueUrl: normalizeText(data.submissionIssueUrl),
+    sourceSubmissionUrl: normalizeText(data.sourceSubmissionUrl),
     importPrNumber:
       Number.isInteger(importPrNumber) && importPrNumber > 0
         ? importPrNumber
@@ -365,14 +405,52 @@ function isNewDirectContentEntry(entry) {
   return false;
 }
 
-function existingEntryHasOnlyMetadataUpdates(entry) {
-  const current = entry.fields || {};
-  const base = entry.baseFields || {};
-  const metadataKeys = new Set(["safety_notes", "privacy_notes"]);
+const EXISTING_ENTRY_METADATA_UPDATE_KEYS = new Set([
+  "privacyNotes",
+  "safetyNotes",
+]);
 
-  for (const key of Object.keys({ ...current, ...base })) {
-    if (metadataKeys.has(key)) continue;
-    if (normalizeText(current[key]) !== normalizeText(base[key])) return false;
+function canonicalFrontmatterValue(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => canonicalFrontmatterValue(item));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort()
+        .map((key) => [key, canonicalFrontmatterValue(value[key])]),
+    );
+  }
+
+  return normalizeText(value);
+}
+
+function frontmatterChangedOutsideAllowedMetadata(
+  currentData = {},
+  baseData = {},
+) {
+  for (const key of Object.keys({ ...currentData, ...baseData }).sort()) {
+    if (EXISTING_ENTRY_METADATA_UPDATE_KEYS.has(key)) continue;
+    if (
+      JSON.stringify(canonicalFrontmatterValue(currentData[key])) !==
+      JSON.stringify(canonicalFrontmatterValue(baseData[key]))
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function existingEntryHasOnlyMetadataUpdates(entry) {
+  if (
+    frontmatterChangedOutsideAllowedMetadata(
+      entry.frontmatterData,
+      entry.baseFrontmatterData,
+    )
+  ) {
+    return false;
   }
 
   return (
@@ -435,9 +513,11 @@ function addGeneratedArtifactSignals(report, files, sourceType) {
 function addContentRiskSignals(report, fields, content) {
   const text = [
     fields.github_url,
+    fields.source_url,
     fields.website_url,
     fields.docs_url,
     fields.download_url,
+    fields.affiliate_url,
     fields.install_command,
     fields.usage_snippet,
     fields.full_copyable_content,
@@ -450,6 +530,24 @@ function addContentRiskSignals(report, fields, content) {
     content,
   ].join("\n");
   const executableSourceUrls = collectUrls(installText);
+  const submittedSourceUrls = [
+    fields.github_url,
+    fields.source_url,
+    fields.website_url,
+    fields.docs_url,
+    fields.download_url,
+    fields.affiliate_url,
+  ].filter(Boolean);
+
+  if (submittedSourceUrls.some(isLikelyAffiliateUrl)) {
+    addFlag(
+      report,
+      "high",
+      "affiliate_referral_url",
+      "Contributor content contains affiliate or referral URL parameters",
+      submittedSourceUrls.filter(isLikelyAffiliateUrl).join(", "),
+    );
+  }
 
   if (
     /\b(ghp_[a-z0-9_]{20,}|github_pat_[a-z0-9_]{40,}|sk-[a-z0-9]{20,}|akia[0-9a-z]{16}|xq_[a-f0-9]{40,})\b/i.test(
@@ -492,7 +590,7 @@ function addContentRiskSignals(report, fields, content) {
       report,
       "medium",
       "community_archive_download",
-      "Submitted package archive URLs require maintainer package review and are not auto-import eligible",
+      "Submitted package archive URLs require maintainer package review before direct merge",
       downloadUrl,
     );
   }
@@ -676,10 +774,7 @@ function validatePrProvenance(report, entries, prAuthor, sourceType) {
   if (sourceType !== "external_direct") return;
 
   for (const entry of entries) {
-    if (
-      !isNewDirectContentEntry(entry) &&
-      existingEntryHasOnlyMetadataUpdates(entry)
-    ) {
+    if (!isNewDirectContentEntry(entry)) {
       if (submitterProvenanceChanged(entry)) {
         addProvenanceFinding(
           report,
@@ -688,8 +783,12 @@ function validatePrProvenance(report, entries, prAuthor, sourceType) {
           "Direct contributor PRs cannot change submitter provenance on existing content",
           `${entry.filename}: leave existing submittedBy/submittedByUrl unchanged; maintainers can handle attribution corrections separately.`,
         );
+        continue;
       }
-      continue;
+
+      if (existingEntryHasOnlyMetadataUpdates(entry)) {
+        continue;
+      }
     }
 
     const provenance = entry.provenance;
@@ -743,10 +842,24 @@ function tierFromFlags(flags) {
 function directContentRequestChangesReasons(report = {}) {
   if (report.subject?.type !== "pull_request") return [];
   const reasons = [];
+  const sourceType = report.sourceType || report.subject?.sourceType;
+  const isExternalDirect = sourceType === "external_direct";
+  const isDirectContentShape =
+    Number(report.changedFileCount || 0) === 1 &&
+    Number(report.contentFileCount || 0) === 1;
+  if (!isExternalDirect && !isDirectContentShape) return [];
+
   const flags = new Set((report.reviewFlags || []).map((flag) => flag.id));
   const warnings = new Set(
     (report.classificationWarnings || []).map((warning) => warning.id),
   );
+  const externalOnlyFlags = new Set(["community_local_download_request"]);
+  const externalOnlyWarnings = new Set([
+    "generated_readme_change",
+    "generated_registry_artifact_change",
+    "community_package_artifact_change",
+    "unsafe_package_verified_true",
+  ]);
 
   for (const finding of report.provenanceFindings || []) {
     if (finding.blocking) {
@@ -762,6 +875,8 @@ function directContentRequestChangesReasons(report = {}) {
       "Content file could not be read through the GitHub API.",
     community_local_download_request:
       "Community PRs cannot request HeyClaude-hosted /downloads package URLs.",
+    affiliate_referral_url:
+      "Contributor content cannot include affiliate or referral URL parameters.",
     non_https_executable_source:
       "Install or usage instructions fetch executable content from a non-HTTPS URL.",
     unsafe_install_pipeline:
@@ -774,6 +889,7 @@ function directContentRequestChangesReasons(report = {}) {
       "Submission appears to include clearly unacceptable content.",
   };
   for (const [id, reason] of Object.entries(flagReasons)) {
+    if (!isExternalDirect && externalOnlyFlags.has(id)) continue;
     if (flags.has(id)) reasons.push(`${reason} (${id}).`);
   }
 
@@ -802,6 +918,7 @@ function directContentRequestChangesReasons(report = {}) {
       "Credential, local data, telemetry, or third-party data behavior needs privacyNotes disclosure.",
   };
   for (const [id, reason] of Object.entries(warningReasons)) {
+    if (!isExternalDirect && externalOnlyWarnings.has(id)) continue;
     if (warnings.has(id)) reasons.push(`${reason} (${id}).`);
   }
 
@@ -830,12 +947,14 @@ function buildReport({ args, files, headRepo, baseRepo, headRef, sourceType }) {
       head: { ref: headRef, repo: { full_name: headRepo } },
       base: { repo: { full_name: baseRepo } },
     },
+    changedFileCount: files.length,
   };
   const contentFiles = files.filter(
     (file) =>
       /^content\/[^/]+\/[^/]+\.mdx$/i.test(normalizeText(file.filename)) &&
       normalizeText(file.status) !== "removed",
   );
+  report.contentFileCount = contentFiles.length;
 
   addGeneratedArtifactSignals(report, files, sourceType);
 
@@ -874,7 +993,6 @@ function buildReport({ args, files, headRepo, baseRepo, headRef, sourceType }) {
       typeof file.baseContent === "string"
         ? parseMdxFrontmatter(file.baseContent)
         : { data: {} };
-    const baseFields = frontmatterFields(baseParsed.data, category);
     const baseProvenance = frontmatterProvenance(baseParsed.data);
     if (fields.category && fields.category !== category) {
       addClassificationWarning(
@@ -901,9 +1019,10 @@ function buildReport({ args, files, headRepo, baseRepo, headRef, sourceType }) {
       status: normalizeText(file.status) || "modified",
       baseExists: typeof file.baseContent === "string",
       fields,
-      baseFields,
       provenance,
       baseProvenance,
+      frontmatterData: parsed.data || {},
+      baseFrontmatterData: baseParsed.data || {},
       contentBody: parsed.content || "",
       baseContentBody: baseParsed.content || "",
     });

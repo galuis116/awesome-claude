@@ -3,8 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-import matter from "gray-matter";
 import categorySpec from "@heyclaude/registry/category-spec";
+import { parseSafeFrontmatter } from "@heyclaude/registry/frontmatter";
 
 const categoryOrder = categorySpec.categoryOrder;
 const categoryRank = new Map(
@@ -193,7 +193,7 @@ function readContentFrontmatter(repoRoot, change) {
       if (!name.endsWith(".mdx")) return false;
       {
         const source = fs.readFileSync(path.join(categoryDir, name), "utf8");
-        const { data } = matter(source);
+        const { data } = parseSafeFrontmatter(source);
         return String(data.slug ?? name.replace(/\.mdx$/, "")) === change.slug;
       }
     });
@@ -208,7 +208,7 @@ function readContentFrontmatter(repoRoot, change) {
     contentPath = path.join(repoRoot, relativePath);
   }
 
-  const { data } = matter(fs.readFileSync(contentPath, "utf8"));
+  const { data } = parseSafeFrontmatter(fs.readFileSync(contentPath, "utf8"));
   return { relativePath, data };
 }
 
@@ -219,7 +219,7 @@ export function summarizeReadmeEntryChange({
 }) {
   const action = change.changeType === "updated" ? "Updated" : "Added";
   const title = escapeMarkdownText(frontmatter.title || change.title);
-  const issueNumber = frontmatter.submissionIssueNumber;
+  const sourceSubmissionNumber = frontmatter.sourceSubmissionNumber;
   const pullRequestNumber =
     frontmatter.importPrNumber ?? associatedPullRequest?.number;
   const contributor = frontmatter.submittedBy
@@ -229,7 +229,9 @@ export function summarizeReadmeEntryChange({
   const pieces = [`${action} ${title} content submission`];
   if (pullRequestNumber) pieces.push(`(#${pullRequestNumber})`);
   if (contributor) pieces.push(`by ${contributor}`);
-  if (issueNumber) pieces.push(`via issue #${issueNumber}`);
+  if (sourceSubmissionNumber) {
+    pieces.push(`via submission #${sourceSubmissionNumber}`);
+  }
 
   return pieces.join(" ");
 }
@@ -258,14 +260,15 @@ export async function resolveReadmeEntryChange(change, options = {}) {
 }
 
 export function buildReadmeRefreshBody(resolvedChanges) {
+  const count = resolvedChanges.length;
   const contentLines = resolvedChanges.length
     ? resolvedChanges.map((change) => `- ${change.summary}`).join("\n")
     : "- No individual catalog entries were detected from the README diff.";
 
   return `## Summary
-Automated README refresh after content or generator changes on \`main\`.
+Automated README refresh after content or generator changes on \`main\`. This PR intentionally reuses the \`automation/readme-refresh\` branch, so pending README changes accumulate in one reviewable PR instead of creating one PR per accepted content item.
 
-## Content included
+## Pending content included (${count})
 ${contentLines}
 
 ## What changed

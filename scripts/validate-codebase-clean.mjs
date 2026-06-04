@@ -49,6 +49,8 @@ const ignoredDirs = new Set([
   "dist-ssr",
   "node_modules",
   "apps/web/public/data",
+  "apps/web/public/downloads",
+  "apps/web/src/generated",
   "integrations/raycast/node_modules",
   "reports",
 ]);
@@ -56,6 +58,7 @@ const ignoredDirs = new Set([
 const ignoredFiles = new Set([
   "CHANGELOG.md",
   "apps/web/worker-configuration.d.ts",
+  "apps/web/src/routeTree.gen.ts",
   "scripts/audit-content.mjs",
   "scripts/validate-content.mjs",
   "scripts/validate-codebase-clean.mjs",
@@ -201,6 +204,8 @@ for (const relativePath of forbiddenPaths) {
 function shouldIgnore(relativePath) {
   if (ignoredFiles.has(relativePath)) return true;
   if (relativePath.startsWith("apps/web/public/data/")) return true;
+  if (relativePath.startsWith("apps/web/public/downloads/")) return true;
+  if (relativePath.startsWith("apps/web/src/generated/")) return true;
   if (relativePath.startsWith("integrations/raycast/node_modules/"))
     return true;
   return relativePath.split(path.sep).some((part) => ignoredDirs.has(part));
@@ -238,6 +243,27 @@ function walk(dir) {
     if (!searchable) continue;
 
     const source = fs.readFileSync(fullPath, "utf8");
+    if (
+      relativePath.startsWith("apps/web/src/") &&
+      !relativePath.endsWith(".server.ts") &&
+      !relativePath.endsWith(".server.tsx") &&
+      !relativePath.includes("/generated/") &&
+      /from\s+["']node:/.test(source)
+    ) {
+      failures.push(
+        `${relativePath}: Node builtin import outside server-only module`,
+      );
+    }
+    if (/@\/lib\/content(?=["'])/.test(source)) {
+      failures.push(
+        `${relativePath}: import content artifacts through content.server`,
+      );
+    }
+    if (/@\/lib\/cloudflare-env(?=["'])/.test(source)) {
+      failures.push(
+        `${relativePath}: import Cloudflare runtime through cloudflare-env.server`,
+      );
+    }
     for (const { pattern, label } of forbiddenPatterns) {
       if (pattern.test(source)) failures.push(`${relativePath}: ${label}`);
     }
@@ -286,7 +312,6 @@ if (fs.existsSync(tasksPath)) {
   for (const scriptName of [
     "validate:clean",
     "validate:content:strict",
-    "validate:issue-templates",
     "validate:category-spec",
     "validate:packages",
     "validate:raycast-feed",
@@ -314,7 +339,6 @@ const scriptNames = JSON.parse(
 for (const scriptName of [
   "validate:clean",
   "validate:content:strict",
-  "validate:issue-templates",
   "validate:category-spec",
   "validate:packages",
   "validate:raycast-feed",
@@ -348,8 +372,9 @@ for (const route of [
   "/api/registry/diff:",
   "/api/registry/entries/{category}/{slug}:",
   "/api/registry/entries/{category}/{slug}/llms:",
-  "/api/submissions:",
+  "/api/submissions/preflight:",
   "/api/listing-leads:",
+  "/api/jobs/{slug}:",
   "/api/admin/listing-leads:",
   "/api/admin/jobs:",
   "/api/admin/jobs/health:",
