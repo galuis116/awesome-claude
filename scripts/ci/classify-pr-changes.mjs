@@ -174,8 +174,9 @@ const generatedArtifactInfra = touches(
   "README.md",
 );
 const submissionAutomationInfra = touches(
-  /^scripts\/analyze-submission-risk\.mjs$/,
+  /^scripts\/(analyze-submission-risk|import-submission-issue|validate-submission-issue)\.mjs$/,
 );
+const scriptOrTestInfra = touches(/^scripts\//, /^tests\/.*\.test\.ts$/);
 const submissionGateInfra = touches(
   /^apps\/submission-gate\//,
   /^tests\/submission-gate-.*\.test\.ts$/,
@@ -238,6 +239,7 @@ const flags = {
     touches("package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml"),
   ci:
     submissionAutomationInfra ||
+    scriptOrTestInfra ||
     touches(
       /^\.github\/workflows\//,
       /^scripts\/ci\//,
