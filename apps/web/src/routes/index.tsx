@@ -25,21 +25,32 @@ import { CountUp } from "@/components/count-up";
 import { HeroStatusRow } from "@/components/hero-status-row";
 import { HowItWorks } from "@/components/how-it-works";
 import { AgentNativeStrip } from "@/components/agent-native-strip";
-import { EcosystemPulse } from "@/components/ecosystem-pulse";
+import { EcosystemPulse, type EcosystemPulseData } from "@/components/ecosystem-pulse";
 import { useRecents } from "@/lib/recents";
 import { useEffect, useState } from "react";
 import { createServerFn } from "@tanstack/react-start";
 import { CATEGORIES, type Category, type Entry } from "@/types/registry";
 import { absoluteUrl } from "@/lib/seo";
 import { ogImageUrl } from "@/lib/og-image";
+import { filterRecentPulseEntries } from "@/lib/ecosystem-pulse-window";
 
 // Home featured/brief/stats are computed server-side so the ~1 MB registry dataset stays out of
 // the / route's client chunk (the dataset is dynamically imported inside this server handler only).
 const loadHomeData = createServerFn({ method: "GET" }).handler(async () => {
   const { ENTRIES, BRIEF_ISSUES, REGISTRY_GENERATED_AT } = await import("@/data/entries");
   const { search } = await import("@/data/search");
+  const { CHANGELOG } = await import("@/data/changelog");
+  const { CONTRIBUTORS } = await import("@/data/contributors");
   const categoryCounts: Record<string, number> = {};
   for (const e of ENTRIES) categoryCounts[e.category] = (categoryCounts[e.category] ?? 0) + 1;
+  const recentChangelog = filterRecentPulseEntries(CHANGELOG);
+  const pulseCounts = recentChangelog.reduce(
+    (acc, c) => {
+      acc[c.kind] = (acc[c.kind] ?? 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
   return {
     stats: {
       total: ENTRIES.length,
@@ -55,6 +66,24 @@ const loadHomeData = createServerFn({ method: "GET" }).handler(async () => {
     categoryCounts,
     registryGeneratedAt: REGISTRY_GENERATED_AT,
     brief: BRIEF_ISSUES[0] ?? null,
+    pulse: {
+      recent: recentChangelog.slice(0, 4).map((item) => ({
+        ref: item.ref,
+        kind: item.kind,
+        category: item.category,
+        title: item.title,
+        date: item.date,
+      })),
+      topContributors: [...CONTRIBUTORS]
+        .sort((a, b) => (b.acceptedCount ?? 0) - (a.acceptedCount ?? 0))
+        .slice(0, 4)
+        .map((contributor) => ({
+          slug: contributor.slug,
+          name: contributor.name,
+          acceptedCount: contributor.acceptedCount,
+        })),
+      counts: pulseCounts,
+    } satisfies EcosystemPulseData,
   };
 });
 
@@ -128,6 +157,7 @@ function Home() {
   const newest = data.newest as Entry[];
   const sourceBacked = data.sourceBackedEntries as Entry[];
   const categoryCounts = data.categoryCounts as Record<string, number>;
+  const pulse = data.pulse as EcosystemPulseData;
   const latestBrief = data.brief;
   const TOTAL = data.stats.total;
   const TRUSTED_COUNT = data.stats.trusted;
@@ -446,7 +476,7 @@ function Home() {
           )}
         </div>
         <aside>
-          <EcosystemPulse />
+          <EcosystemPulse data={pulse} />
         </aside>
       </section>
 
