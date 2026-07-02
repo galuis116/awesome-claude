@@ -5,6 +5,7 @@ import { ENTRIES } from "@/data/entries";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { absoluteUrl } from "@/lib/seo";
+import { CommercialDisclosure } from "@/components/commercial-disclosure";
 
 type ClaimType = "maintain" | "transfer" | "correct" | "remove";
 
@@ -77,6 +78,31 @@ const PROOF_FIELDS = [
 ] as const;
 
 const TYPE_OPTIONS: ClaimType[] = ["maintain", "transfer", "correct", "remove"];
+
+function resolveClaimWebsiteUrl(
+  entry: (typeof ENTRIES)[number],
+  proof: Record<string, string>,
+): string {
+  const candidates = [entry.sourceUrl, entry.repoUrl, entry.docsUrl, entry.websiteUrl];
+  for (const url of candidates) {
+    const trimmed = (url ?? "").trim();
+    if (/^https:\/\//i.test(trimmed)) return trimmed;
+  }
+  const repo = (proof.repo ?? "").trim();
+  if (repo) {
+    const normalized = repo
+      .replace(/^https?:\/\/github\.com\//i, "")
+      .replace(/^github\.com\//i, "")
+      .replace(/^\//, "")
+      .replace(/[?#].*$/, "");
+    if (/^[\w.-]+\/[\w.-]+$/.test(normalized)) {
+      return `https://github.com/${normalized}`;
+    }
+  }
+  const link = (proof.link ?? "").trim();
+  if (/^https:\/\//i.test(link)) return link;
+  return "";
+}
 
 function ClaimPage() {
   const [done, setDone] = React.useState(false);
@@ -175,7 +201,7 @@ function ClaimPage() {
           contactEmail,
           companyName: picked.author || picked.brandName || "Listing owner",
           listingTitle: picked.title,
-          websiteUrl: picked.sourceUrl || picked.repoUrl || picked.docsUrl || "",
+          websiteUrl: resolveClaimWebsiteUrl(picked, proof),
           message: [
             `Claim type: ${CLAIM_TYPE_LABEL[type]}`,
             `Entry: ${picked.category}/${picked.slug}`,
@@ -268,9 +294,7 @@ function ClaimPage() {
                     aria-expanded={matches.length > 0}
                     aria-controls={listboxId}
                     aria-autocomplete="list"
-                    aria-activedescendant={
-                      activeIndex >= 0 ? optionId(activeIndex) : undefined
-                    }
+                    aria-activedescendant={activeIndex >= 0 ? optionId(activeIndex) : undefined}
                     className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-ink placeholder:text-ink-subtle focus:border-ink focus:outline-none"
                   />
                   {matches.length > 0 && (
@@ -403,6 +427,7 @@ function ClaimPage() {
             </p>
           </div>
 
+          <CommercialDisclosure />
           <div className="rounded-xl border border-border bg-surface p-5">
             <div className="flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-ink-muted" />
