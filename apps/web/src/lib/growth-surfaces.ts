@@ -1,28 +1,19 @@
 import { cache } from "react";
 
 import { ENTRIES } from "@/data/entries";
-import { entryCommunityTarget, safeCommunitySignalCounts } from "@/lib/community-signals";
+import { safeCommunitySignalCounts } from "@/lib/community-signals";
 import { buildDiscoverySurfaceLists } from "@/lib/growth-surface-rules";
 import { communityDiscoveryScore } from "@/lib/growth-ranking";
+import { growthEntryKey, growthSignalTarget } from "@/lib/growth-surfaces-lib";
 import { safeIntentEventCounts } from "@/lib/intent-events";
 import { safeVoteCounts } from "@/lib/votes";
 
-type GrowthEntry = (typeof ENTRIES)[number];
-
-function entryKey(entry: GrowthEntry) {
-  return `${entry.category}:${entry.slug}`;
-}
-
-function signalTarget(entry: GrowthEntry) {
-  return entryCommunityTarget(entry.category, entry.slug);
-}
-
 export const getGrowthSurfaces = cache(async () => {
   const entries = ENTRIES;
-  const entryKeys = entries.map(entryKey);
+  const entryKeys = entries.map(growthEntryKey);
   const communityTargets = entries.map((entry) => ({
     targetKind: "entry" as const,
-    targetKey: signalTarget(entry),
+    targetKey: growthSignalTarget(entry),
   }));
   const [voteState, communityState, intentState] = await Promise.all([
     safeVoteCounts(entryKeys),
@@ -34,9 +25,9 @@ export const getGrowthSurfaces = cache(async () => {
     .map((entry) => ({
       entry,
       score: communityDiscoveryScore({
-        communitySignals: communityState.counts[signalTarget(entry)],
-        intentCounts: intentState.counts[entryKey(entry)],
-        votes: voteState.counts[entryKey(entry)] ?? 0,
+        communitySignals: communityState.counts[growthSignalTarget(entry)],
+        intentCounts: intentState.counts[growthEntryKey(entry)],
+        votes: voteState.counts[growthEntryKey(entry)] ?? 0,
         firstPartyPackage: Boolean(entry.downloadUrl && entry.packageVerified),
         productionVerified: entry.verificationStatus === "production",
       }),
