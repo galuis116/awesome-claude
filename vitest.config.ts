@@ -51,6 +51,7 @@ export default defineConfig({
         "packages/mcp/src/cli-options.js",
         "apps/web/src/data/comparisons.ts",
         "apps/web/src/data/tools.ts",
+        "apps/web/src/lib/analytics.ts",
         "apps/web/src/lib/api/example.functions.ts",
         "apps/web/src/lib/brief-schedule.ts",
         "apps/web/src/lib/csv.ts",
