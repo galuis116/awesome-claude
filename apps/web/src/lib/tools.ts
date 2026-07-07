@@ -1,40 +1,9 @@
-import type { DirectoryEntry, ToolListing } from "@heyclaude/registry";
+import type { ToolListing } from "@heyclaude/registry";
 import { compareToolListings } from "@heyclaude/registry/commercial";
 
 import { getDirectoryEntriesByCategory } from "@/lib/content.server";
 import { getSiteDb } from "@/lib/db";
-
-type PlacementRow = {
-  target_key: string;
-  tier: string;
-  disclosure: string;
-  starts_at: string | null;
-  expires_at: string | null;
-};
-
-function toToolListing(entry: DirectoryEntry, placement?: PlacementRow): ToolListing {
-  const sponsored = placement?.tier === "sponsored";
-  const featured = sponsored || placement?.tier === "featured";
-
-  return {
-    ...entry,
-    featured,
-    sponsored,
-    disclosure: (placement?.disclosure ||
-      entry.disclosure ||
-      "editorial") as ToolListing["disclosure"],
-    placement: placement
-      ? {
-          targetKind: "tool",
-          targetKey: placement.target_key,
-          tier: placement.tier as "standard" | "featured" | "sponsored",
-          disclosure: placement.disclosure as "editorial" | "affiliate" | "sponsored",
-          startsAt: placement.starts_at || undefined,
-          expiresAt: placement.expires_at || undefined,
-        }
-      : undefined,
-  };
-}
+import { toToolListing, type PlacementRow } from "@/lib/tools-lib";
 
 async function getActivePlacements() {
   const db = getSiteDb();
