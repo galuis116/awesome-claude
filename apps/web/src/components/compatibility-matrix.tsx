@@ -2,6 +2,7 @@ import * as React from "react";
 import { Download, Search, X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CopyButton } from "@/components/copy-button";
+import { csvEscape } from "@/lib/csv";
 import { cn } from "@/lib/utils";
 
 export type Support = "native" | "adapter" | "manual" | "none";
@@ -68,8 +69,8 @@ export function CompatibilityMatrix({
     const body = rows
       .map((r) =>
         [
-          csv(r.capability),
-          csv(r.blurb),
+          csvEscape(r.capability),
+          csvEscape(r.blurb),
           ...clients.map((c) => SUPPORT_META[r.cells[c.id]].label),
         ].join(","),
       )
@@ -303,9 +304,4 @@ function CellPopover({
       )}
     </div>
   );
-}
-
-function csv(v: string) {
-  if (/[",\n]/.test(v)) return `"${v.replace(/"/g, '""')}"`;
-  return v;
 }
