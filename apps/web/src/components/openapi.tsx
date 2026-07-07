@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Send, Loader2, ChevronDown } from "lucide-react";
 import { CopyButton } from "@/components/copy-button";
 import type { OpenApiEndpoint, OpenApiParam } from "@/data/openapi";
+import { buildRequestUrl } from "@/lib/openapi-request-lib";
 import { cn } from "@/lib/utils";
 
 const METHOD_STYLES: Record<OpenApiEndpoint["method"], string> = {
@@ -249,24 +250,6 @@ export function OpenApiPlayground({ endpoint }: { endpoint: OpenApiEndpoint }) {
       )}
     </div>
   );
-}
-
-function buildRequestUrl(endpoint: OpenApiEndpoint, values: Record<string, string>) {
-  let path = endpoint.path.replace(/\{(\w+)\}/g, (_match, name) => {
-    const value = values[name] || endpoint.parameters?.find((p) => p.name === name)?.example;
-    return encodeURIComponent(value || "");
-  });
-
-  const params = new URLSearchParams();
-  endpoint.parameters
-    ?.filter((param) => param.in === "query")
-    .forEach((param) => {
-      const value = values[param.name] || param.example || "";
-      if (value) params.set(param.name, value);
-    });
-  const query = params.toString();
-  if (query) path = `${path}?${query}`;
-  return path;
 }
 
 function ParamInput({
