@@ -2,6 +2,10 @@
 // growth-surfaces.ts so they can be unit-tested without the async data/D1 layer
 // that `getGrowthSurfaces` depends on.
 
+// `community-signals.ts` (the D1-backed module the previous inline `signalTarget`
+// imported from) simply re-exports `entryCommunityTarget` from this same pure
+// `community-signals-lib`, so importing it directly here is behaviour-identical
+// to the original — just without pulling the data layer into unit tests.
 import { entryCommunityTarget } from "@/lib/community-signals-lib";
 
 type GrowthEntryRef = { category: string; slug: string };

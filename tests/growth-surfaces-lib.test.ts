@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { entryCommunityTarget } from "../apps/web/src/lib/community-signals-lib";
 import {
   growthEntryKey,
   growthSignalTarget,
@@ -40,5 +41,17 @@ describe("growthSignalTarget", () => {
     expect(growthSignalTarget(entry)).toBe("entry:skills/bar");
     expect(growthEntryKey(entry)).toBe("skills:bar");
     expect(growthSignalTarget(entry)).not.toBe(growthEntryKey(entry));
+  });
+
+  it("delegates exactly to entryCommunityTarget (parity with the prior signalTarget)", () => {
+    for (const entry of [
+      { category: "mcp", slug: "foo" },
+      { category: "hooks", slug: "docker-image-security-scanner" },
+      { category: "guides", slug: "" },
+    ]) {
+      expect(growthSignalTarget(entry)).toBe(
+        entryCommunityTarget(entry.category, entry.slug),
+      );
+    }
   });
 });
