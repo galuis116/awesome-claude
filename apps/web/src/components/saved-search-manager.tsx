@@ -32,19 +32,9 @@ import {
 import { subscribeToNewsletter } from "@/lib/api/newsletter";
 import { hashSearch } from "@/lib/saved-search-hash-lib";
 import { applyToBrowseSearch } from "@/lib/saved-search-nav-lib";
+import { savedFeedUrl } from "@/lib/saved-search-feed-url-lib";
 import { CopyButton } from "@/components/copy-button";
 import { cn } from "@/lib/utils";
-
-export function savedFeedUrl(s: SavedSearch): string {
-  const p = new URLSearchParams();
-  if (s.q) p.set("q", s.q);
-  if (s.category) p.set("category", s.category);
-  if (s.trust) p.set("trust", s.trust);
-  if (s.source) p.set("source", s.source);
-  if (s.platform) p.set("platform", s.platform);
-  if (s.label) p.set("label", s.label);
-  return `/feeds/saved.xml?${p.toString()}`;
-}
 
 interface ManagerProps {
   open?: boolean;
