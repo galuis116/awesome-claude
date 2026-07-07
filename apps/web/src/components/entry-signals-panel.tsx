@@ -7,6 +7,7 @@ import {
   ZERO_COMMUNITY,
   asCommunityCounts,
 } from "@/lib/entry-signals-counts-lib";
+import { communityTargetKey, entryKey } from "@/lib/entry-signals-keys-lib";
 import { cn } from "@/lib/utils";
 
 type SignalState = {
@@ -21,14 +22,6 @@ type SignalState = {
 
 const CLIENT_STORAGE_KEY = "hc:client-id";
 const COMMUNITY_STORAGE_PREFIX = "hc:community:";
-
-function entryKey(category: Category, slug: string) {
-  return `${category}:${slug}`;
-}
-
-function communityTargetKey(category: Category, slug: string) {
-  return `entry:${category}/${slug}`;
-}
 
 function getClientId() {
   if (typeof window === "undefined") return "";
