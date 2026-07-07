@@ -2,7 +2,7 @@ import * as React from "react";
 import { Download, Search, X } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CopyButton } from "@/components/copy-button";
-import { csvEscape } from "@/lib/csv";
+import { buildCompatibilityCsv } from "@/lib/compatibility-matrix-csv-lib";
 import { cn } from "@/lib/utils";
 
 export type Support = "native" | "adapter" | "manual" | "none";
@@ -65,17 +65,8 @@ export function CompatibilityMatrix({
   }, [rows, query]);
 
   const downloadCsv = () => {
-    const header = ["Capability", "Detail", ...clients.map((c) => c.label)].join(",");
-    const body = rows
-      .map((r) =>
-        [
-          csvEscape(r.capability),
-          csvEscape(r.blurb),
-          ...clients.map((c) => SUPPORT_META[r.cells[c.id]].label),
-        ].join(","),
-      )
-      .join("\n");
-    const blob = new Blob([`${header}\n${body}\n`], { type: "text/csv;charset=utf-8" });
+    const csv = buildCompatibilityCsv(clients, rows, (support) => SUPPORT_META[support].label);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
