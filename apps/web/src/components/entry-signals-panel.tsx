@@ -2,13 +2,12 @@ import { AlertTriangle, ArrowBigUp, Check, Eye, LoaderCircle } from "lucide-reac
 import * as React from "react";
 
 import type { Category } from "@/types/registry";
+import {
+  type CommunityCounts,
+  ZERO_COMMUNITY,
+  asCommunityCounts,
+} from "@/lib/entry-signals-counts-lib";
 import { cn } from "@/lib/utils";
-
-type CommunityCounts = {
-  used: number;
-  works: number;
-  broken: number;
-};
 
 type SignalState = {
   loading: boolean;
@@ -20,7 +19,6 @@ type SignalState = {
   activeCommunity: Partial<Record<keyof CommunityCounts, boolean>>;
 };
 
-const ZERO_COMMUNITY: CommunityCounts = { used: 0, works: 0, broken: 0 };
 const CLIENT_STORAGE_KEY = "hc:client-id";
 const COMMUNITY_STORAGE_PREFIX = "hc:community:";
 
@@ -74,15 +72,6 @@ async function postJson(path: string, payload: unknown) {
   });
   if (!response.ok) throw new Error(`${path} returned ${response.status}`);
   return response.json() as Promise<Record<string, unknown>>;
-}
-
-function asCommunityCounts(value: unknown): CommunityCounts {
-  const source = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
-  return {
-    used: Number(source.used ?? 0) || 0,
-    works: Number(source.works ?? 0) || 0,
-    broken: Number(source.broken ?? 0) || 0,
-  };
 }
 
 export function EntrySignalsPanel({ category, slug }: { category: Category; slug: string }) {
