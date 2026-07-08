@@ -1,5 +1,6 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { monogramHue, monogramInitials } from "@/lib/monogram-lib";
 
 /** Deterministic citron-tinted gradient monogram avatar. */
 export function Monogram({
@@ -11,18 +12,10 @@ export function Monogram({
   size?: number;
   className?: string;
 }) {
-  const initials = React.useMemo(() => {
-    const parts = name.trim().split(/\s+/);
-    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  }, [name]);
+  const initials = React.useMemo(() => monogramInitials(name), [name]);
 
-  // Deterministic hue offset from the name
-  const hue = React.useMemo(() => {
-    let h = 0;
-    for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) | 0;
-    return Math.abs(h % 60) - 30; // -30..+30 around citron (115)
-  }, [name]);
+  // Deterministic hue offset (−30..+30 around citron 115) from the name
+  const hue = React.useMemo(() => monogramHue(name), [name]);
 
   const bg = `linear-gradient(135deg, oklch(0.94 0.18 ${115 + hue}) 0%, oklch(0.88 0.12 ${115 + hue + 20}) 100%)`;
   const fontPx = Math.round(size * 0.38);
