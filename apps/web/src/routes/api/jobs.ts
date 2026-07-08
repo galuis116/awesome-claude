@@ -3,47 +3,10 @@ import { createApiFileRoute } from "@/lib/api/file-route";
 import { publicJobsQuerySchema } from "@/lib/api/contracts";
 import { createApiHandler, type InferApiQuery } from "@/lib/api/router";
 import { cachedJsonResponse } from "@/lib/http-cache";
-import { buildPublicJobsIndex, getJobs, type PublicJobListing } from "@/lib/jobs";
+import { buildPublicJobsIndex, getJobs } from "@/lib/jobs";
+import { jobPostedAtMs, matchesBoolFilter, matchesQuery } from "@/lib/public-jobs-filter-lib";
 
 const MAX_OFFSET = 10_000;
-
-function matchesQuery(job: PublicJobListing, query: string) {
-  if (!query) return true;
-  const haystack = [
-    job.title,
-    job.company,
-    job.location,
-    job.description,
-    job.type,
-    job.compensation,
-    job.equity,
-    job.bonus,
-    job.sourceLabel,
-    ...(job.labels ?? []),
-    ...(job.benefits ?? []),
-    ...(job.responsibilities ?? []),
-    ...(job.requirements ?? []),
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-  return haystack.includes(query);
-}
-
-function matchesBoolFilter(filter: "all" | "true" | "false" | "", value: boolean) {
-  if (!filter || filter === "all") return true;
-  return filter === "true" ? value : !value;
-}
-
-function jobPostedAtMs(job: PublicJobListing): number | null {
-  const candidates = [job.postedAt, job.firstSeenAt];
-  for (const candidate of candidates) {
-    if (!candidate) continue;
-    const parsed = Date.parse(candidate);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return null;
-}
 
 export const GET = createApiHandler("jobs.list", async ({ request, query: parsedQuery }) => {
   const {
