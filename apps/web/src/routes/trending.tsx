@@ -1,5 +1,6 @@
 import * as React from "react";
 import { hasLiveSignals, type SignalState } from "@/lib/trending-live-signals-lib";
+import { trendingRowsFromPayload, type TrendingEntry } from "@/lib/trending-rows-lib";
 import { createFileRoute, Link, stripSearchParams } from "@tanstack/react-router";
 import { z } from "zod";
 import { ArrowRight, Clock, Flame, Info, Rss, Star, TrendingUp } from "lucide-react";
@@ -10,7 +11,7 @@ import { CategoryPill, SourceBadge, TrustBadge } from "@/components/badges";
 import { TrendingPodium } from "@/components/trending-podium";
 import { ShareMenu } from "@/components/share-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { CATEGORIES, type Entry } from "@/types/registry";
+import { CATEGORIES } from "@/types/registry";
 import { formatCompact } from "@/lib/format";
 import { breadcrumbScript } from "@/lib/seo-jsonld";
 import { absoluteUrl } from "@/lib/seo";
@@ -26,11 +27,6 @@ const trendingSchema = z.object({
   window: z.enum(["7d", "30d", "all"]).catch(defaultSearch.window).default(defaultSearch.window),
   category: z.string().catch(defaultSearch.category).default(defaultSearch.category),
 });
-
-type TrendingEntry = Entry & {
-  trendingScore?: number;
-  trendingReasons?: string[];
-};
 
 type TrendingPayload = {
   signalsAvailable?: SignalState;
@@ -103,17 +99,7 @@ function fallbackRows(): TrendingEntry[] {
 }
 
 function rowsFromPayload(payload: TrendingPayload): TrendingEntry[] {
-  const rows: TrendingEntry[] = [];
-  for (const item of payload.entries ?? []) {
-    const entry = getEntry(item.category, item.slug);
-    if (!entry) continue;
-    rows.push({
-      ...entry,
-      trendingScore: Math.round(Number(item.score ?? 0)),
-      trendingReasons: item.reasons ?? [],
-    });
-  }
-  return rows;
+  return trendingRowsFromPayload(payload.entries ?? [], getEntry);
 }
 
 function useTrendingRows() {
