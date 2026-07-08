@@ -5,6 +5,20 @@ export type DecisionTimelinePresetId = "fast-track" | "balanced" | "security-fir
 
 export type DecisionTimelineStepTone = "complete" | "warning" | "critical";
 
+/** Tailwind border/background classes for a decision-timeline step card. */
+export function decisionStepToneClass(tone: DecisionTimelineStepTone): string {
+  if (tone === "critical") return "border-trust-blocked/35 bg-trust-blocked/5";
+  if (tone === "warning") return "border-amber-500/35 bg-amber-500/5";
+  return "border-border bg-background";
+}
+
+/** Tailwind chip classes for a decision-timeline risk score (0-100). */
+export function decisionRiskClass(score: number): string {
+  if (score >= 60) return "border-trust-blocked/40 bg-trust-blocked/10 text-trust-blocked";
+  if (score >= 30) return "border-amber-500/40 bg-amber-500/10 text-amber-900";
+  return "border-trust-trusted/40 bg-trust-trusted/10 text-trust-trusted";
+}
+
 export type DecisionTimelineStep = {
   id: string;
   phase: "triage" | "verify" | "rollout";

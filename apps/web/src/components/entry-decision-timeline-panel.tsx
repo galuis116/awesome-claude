@@ -2,6 +2,7 @@ import type {
   DecisionTimelinePresetId,
   EntryDecisionTimelineState,
 } from "@/lib/entry-decision-timeline";
+import { decisionRiskClass, decisionStepToneClass } from "@/lib/entry-decision-timeline-lib";
 import { cn } from "@/lib/utils";
 
 const PRESETS: { id: DecisionTimelinePresetId; label: string }[] = [
@@ -9,18 +10,6 @@ const PRESETS: { id: DecisionTimelinePresetId; label: string }[] = [
   { id: "balanced", label: "Balanced" },
   { id: "security-first", label: "Security first" },
 ];
-
-function toneClass(tone: "complete" | "warning" | "critical"): string {
-  if (tone === "critical") return "border-trust-blocked/35 bg-trust-blocked/5";
-  if (tone === "warning") return "border-amber-500/35 bg-amber-500/5";
-  return "border-border bg-background";
-}
-
-function riskClass(score: number): string {
-  if (score >= 60) return "border-trust-blocked/40 bg-trust-blocked/10 text-trust-blocked";
-  if (score >= 30) return "border-amber-500/40 bg-amber-500/10 text-amber-900";
-  return "border-trust-trusted/40 bg-trust-trusted/10 text-trust-trusted";
-}
 
 export function EntryDecisionTimelinePanel({
   state,
@@ -48,7 +37,7 @@ export function EntryDecisionTimelinePanel({
         <span
           className={cn(
             "inline-flex rounded-full border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide",
-            riskClass(state.riskScore),
+            decisionRiskClass(state.riskScore),
           )}
         >
           Risk {state.riskScore}
@@ -78,7 +67,7 @@ export function EntryDecisionTimelinePanel({
         {state.steps.map((step) => (
           <article
             key={step.id}
-            className={cn("rounded-md border px-3 py-2.5", toneClass(step.tone))}
+            className={cn("rounded-md border px-3 py-2.5", decisionStepToneClass(step.tone))}
           >
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="min-w-0">

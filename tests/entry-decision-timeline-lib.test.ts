@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { Entry } from "@/types/registry";
-import { entryDecisionTimelineState } from "@/lib/entry-decision-timeline-lib";
+import {
+  decisionRiskClass,
+  decisionStepToneClass,
+  entryDecisionTimelineState,
+} from "@/lib/entry-decision-timeline-lib";
 
 function entry(overrides: Partial<Entry> = {}): Entry {
   return {
@@ -207,5 +211,21 @@ describe("entry decision timeline lib", () => {
     });
     const state = entryDecisionTimelineState(hashed, "balanced", []);
     expect(state.steps.find((step) => step.id === "package")?.done).toBe(true);
+  });
+});
+
+describe("decisionStepToneClass", () => {
+  it("maps each step tone to its card classes", () => {
+    expect(decisionStepToneClass("critical")).toContain("bg-trust-blocked/5");
+    expect(decisionStepToneClass("warning")).toContain("bg-amber-500/5");
+    expect(decisionStepToneClass("complete")).toContain("bg-background");
+  });
+});
+
+describe("decisionRiskClass", () => {
+  it("bands the risk score into chip classes", () => {
+    expect(decisionRiskClass(60)).toContain("text-trust-blocked");
+    expect(decisionRiskClass(30)).toContain("text-amber-900");
+    expect(decisionRiskClass(29)).toContain("text-trust-trusted");
   });
 });
