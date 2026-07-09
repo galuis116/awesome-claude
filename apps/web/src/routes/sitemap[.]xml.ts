@@ -11,20 +11,16 @@ import { getIndexableTagGroups } from "@/lib/tags";
 import { isSitemapIndexableEntry } from "@/lib/sitemap-policy";
 import { COMPARISONS } from "@/data/comparisons";
 import { REPORT_PATHS } from "@/lib/data-reports";
-import { escapeXml } from "@/lib/xml-escape-lib";
+import { sitemapUrlItem } from "@/lib/sitemap-url-item-lib";
 
 function urlItem(pathname: string, priority: string, changefreq = "weekly", lastmodInput?: string) {
-  const lastmod = String(lastmodInput || atlasRegistry.generatedAt || "").slice(0, 10);
-  return [
-    "  <url>",
-    `    <loc>${escapeXml(`${siteConfig.url}${pathname}`)}</loc>`,
-    lastmod ? `    <lastmod>${escapeXml(lastmod)}</lastmod>` : "",
-    `    <changefreq>${changefreq}</changefreq>`,
-    `    <priority>${priority}</priority>`,
-    "  </url>",
-  ]
-    .filter(Boolean)
-    .join("\n");
+  return sitemapUrlItem({
+    siteUrl: siteConfig.url,
+    pathname,
+    priority,
+    changefreq,
+    lastmod: lastmodInput || atlasRegistry.generatedAt,
+  });
 }
 
 async function renderSitemap() {
