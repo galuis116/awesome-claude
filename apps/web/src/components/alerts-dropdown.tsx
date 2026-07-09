@@ -2,8 +2,8 @@ import * as React from "react";
 import { Bell, CheckCheck, AlertTriangle, Info, OctagonX } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useWatch, type Alert } from "@/lib/watch";
-import { alertBucket } from "@/lib/alerts-bucket-lib";
+import { useWatch } from "@/lib/watch";
+import { groupAlertsByBucket } from "@/lib/alerts-group-lib";
 import { cn } from "@/lib/utils";
 
 const SEV_ICON = {
@@ -15,12 +15,10 @@ const SEV_ICON = {
 export function AlertsDropdown() {
   const { alerts, unreadCount, lastSeenAt, markAllRead, targets, savedSearchAlertCount } =
     useWatch();
-  const grouped = React.useMemo(() => {
-    const out: Record<string, Alert[]> = { Today: [], "This week": [], Earlier: [] };
-    const now = Date.now();
-    for (const a of alerts) out[alertBucket(a.date, now)].push(a);
-    return out;
-  }, [alerts, lastSeenAt]);
+  const grouped = React.useMemo(
+    () => groupAlertsByBucket(alerts, Date.now()),
+    [alerts, lastSeenAt],
+  );
 
   return (
     <Popover>
