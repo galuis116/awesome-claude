@@ -15,40 +15,10 @@ import {
 } from "@/lib/api/router";
 import { isLeadsAdminAuthorized } from "@/lib/admin-auth";
 import { logApiError, logApiInfo, logApiWarn } from "@/lib/api-logs";
-import { csvEscape } from "@/lib/csv";
+import { leadsToCsv, normalizeKind } from "@/lib/listing-leads-csv-lib";
 import { getSiteDb } from "@/lib/db";
 
-const ALLOWED_KINDS = new Set(["job", "tool", "claim"]);
 const MAX_LIMIT = 100;
-const CSV_COLUMNS = [
-  "id",
-  "kind",
-  "status",
-  "tier_interest",
-  "contact_name",
-  "contact_email",
-  "company_name",
-  "listing_title",
-  "website_url",
-  "apply_url",
-  "message",
-  "created_at",
-  "updated_at",
-] as const;
-
-function normalizeKind(value: string | null) {
-  const normalized = String(value ?? "")
-    .trim()
-    .toLowerCase();
-  return ALLOWED_KINDS.has(normalized) ? normalized : "";
-}
-
-function leadsToCsv(rows: Record<string, unknown>[]) {
-  return [
-    CSV_COLUMNS.join(","),
-    ...rows.map((row) => CSV_COLUMNS.map((column) => csvEscape(row[column])).join(",")),
-  ].join("\n");
-}
 
 export const GET = createApiHandler(
   "adminListingLeads.list",
