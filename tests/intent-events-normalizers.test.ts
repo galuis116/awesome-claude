@@ -46,6 +46,33 @@ describe("normalizeIntentSessionId", () => {
     // Oversized ids are dropped rather than stored unbounded.
     expect(normalizeIntentSessionId("x".repeat(129))).toBe("");
   });
+
+  it("accepts the opaque URL-safe token alphabet", () => {
+    expect(normalizeIntentSessionId("hc-9aF_x-1")).toBe("hc-9aF_x-1");
+    expect(normalizeIntentSessionId("session-0")).toBe("session-0");
+  });
+
+  it("keeps personal data out of session_id", () => {
+    // An email, a name with spaces, or non-ASCII free text is not an opaque token.
+    expect(normalizeIntentSessionId("user@example.com")).toBe("");
+    expect(normalizeIntentSessionId("Ada Lovelace")).toBe("");
+    expect(normalizeIntentSessionId("józef")).toBe("");
+  });
+
+  it("rejects credentials and URLs that would otherwise be persisted verbatim", () => {
+    // A JWT is dot-separated, so the dot alone disqualifies it.
+    expect(normalizeIntentSessionId("eyJhbGci.eyJzdWIi.SflKxwRJ")).toBe("");
+    expect(normalizeIntentSessionId("https://heyclau.de/u/1?token=abc")).toBe(
+      "",
+    );
+    expect(normalizeIntentSessionId('{"email":"a@b.c"}')).toBe("");
+  });
+
+  it("returns the empty sentinel for nullish input", () => {
+    expect(normalizeIntentSessionId(null)).toBe("");
+    expect(normalizeIntentSessionId(undefined)).toBe("");
+    expect(normalizeIntentSessionId("")).toBe("");
+  });
 });
 
 describe("getFallbackIntentEventCounts", () => {

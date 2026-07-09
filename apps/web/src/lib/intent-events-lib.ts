@@ -36,9 +36,23 @@ export function normalizeIntentEntryKey(value: unknown) {
   return /^[a-z0-9-]+:[a-z0-9-]+$/.test(normalized) ? normalized : "";
 }
 
+/**
+ * Session ids are opaque correlation tokens, so only the URL-safe base64
+ * alphabet is persisted — the same alphabet the entry-signals client id uses.
+ * This keeps free text out of `intent_events.session_id`: emails, URLs, JWTs
+ * (dot-separated), JSON, and whitespace all fail the pattern.
+ */
+const INTENT_SESSION_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
+
+/**
+ * Normalize a caller-supplied session id. Returns the trimmed id when it is an
+ * opaque token of at most 128 characters, otherwise "" — which the intent-event
+ * route stores as NULL, so an event with an unusable session id is still
+ * recorded rather than rejected.
+ */
 export function normalizeIntentSessionId(value: unknown) {
   const normalized = String(value ?? "").trim();
-  return normalized.length <= 128 ? normalized : "";
+  return INTENT_SESSION_ID_PATTERN.test(normalized) ? normalized : "";
 }
 
 export function getFallbackIntentEventCounts(keys: string[]) {
