@@ -1,8 +1,13 @@
 import { getSiteDb, type D1DatabaseLike } from "@/lib/db";
 import { chunk, inPlaceholders } from "@/lib/d1-batch";
-import { getFallbackClientVotes, getFallbackVoteCounts, isValidEntryKey } from "@/lib/votes-lib";
+import {
+  getFallbackClientVotes,
+  getFallbackVoteCounts,
+  isValidEntryKey,
+  isValidVoteClientId,
+} from "@/lib/votes-lib";
 
-export { getFallbackClientVotes, getFallbackVoteCounts, isValidEntryKey };
+export { getFallbackClientVotes, getFallbackVoteCounts, isValidEntryKey, isValidVoteClientId };
 
 export function getVotesDb(): D1DatabaseLike | null {
   return getSiteDb();

@@ -2,9 +2,40 @@ import { describe, expect, it } from "vitest";
 
 import {
   isValidEntryKey,
+  isValidVoteClientId,
   getFallbackVoteCounts,
   getFallbackClientVotes,
 } from "../apps/web/src/lib/votes-lib";
+
+describe("votes-lib isValidVoteClientId", () => {
+  it("accepts the opaque ids the browser client actually generates", () => {
+    // `hc-${crypto.randomUUID()}` and the time+random fallback.
+    expect(isValidVoteClientId("hc-123e4567-e89b-12d3-a456-426614174000")).toBe(
+      true,
+    );
+    expect(isValidVoteClientId("hc-lz4k9x-a1b2c3d4e5f6g7h8")).toBe(true);
+    expect(isValidVoteClientId("A_b-9xxxxxxxxxxx")).toBe(true);
+  });
+
+  it("keeps personal data and credentials out of votes.client_id", () => {
+    // The votes table stores the id verbatim, so free text must not reach it.
+    expect(isValidVoteClientId("user@example.com")).toBe(false);
+    expect(isValidVoteClientId("Ada Lovelace")).toBe(false);
+    expect(isValidVoteClientId("https://heyclau.de/u/1?token=abc")).toBe(false);
+    expect(isValidVoteClientId("eyJhbGci.eyJzdWIi.SflKxwRJ")).toBe(false);
+  });
+
+  it("keeps the pre-existing 8..128 length bound", () => {
+    expect(isValidVoteClientId("a".repeat(7))).toBe(false);
+    expect(isValidVoteClientId("a".repeat(8))).toBe(true);
+    expect(isValidVoteClientId("a".repeat(128))).toBe(true);
+    expect(isValidVoteClientId("a".repeat(129))).toBe(false);
+  });
+
+  it("rejects an empty id", () => {
+    expect(isValidVoteClientId("")).toBe(false);
+  });
+});
 
 describe("votes-lib isValidEntryKey", () => {
   it("accepts category:slug keys with lowercase alphanumeric hyphen segments", () => {

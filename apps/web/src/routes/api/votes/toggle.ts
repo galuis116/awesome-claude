@@ -3,7 +3,7 @@ import { createApiFileRoute } from "@/lib/api/file-route";
 import { votesToggleBodySchema } from "@/lib/api/contracts";
 import { apiError, apiJson, createApiHandler, type InferApiBody } from "@/lib/api/router";
 import { logApiError, logApiInfo, logApiWarn, sample } from "@/lib/api-logs";
-import { getVotesDb, isValidEntryKey, toggleVote } from "@/lib/votes";
+import { getVotesDb, isValidEntryKey, isValidVoteClientId, toggleVote } from "@/lib/votes";
 
 export const POST = createApiHandler("votes.toggle", async ({ request, body, requestId }) => {
   const payload = body as InferApiBody<typeof votesToggleBodySchema>;
@@ -16,7 +16,7 @@ export const POST = createApiHandler("votes.toggle", async ({ request, body, req
     return apiError("invalid_payload", 400, { requestId });
   }
 
-  if (clientId.length < 8 || clientId.length > 128) {
+  if (!isValidVoteClientId(clientId)) {
     logApiWarn(request, "votes.toggle.invalid_client_id", {
       clientIdLength: clientId.length,
     });
