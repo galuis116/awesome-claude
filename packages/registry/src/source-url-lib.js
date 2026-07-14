@@ -9,6 +9,8 @@
  * re-exports everything below so existing imports stay unchanged.
  */
 
+import { RESERVED_OWNERS } from "./source-repo-lib.js";
+
 const AFFILIATE_PARAMS = new Set([
   "aff",
   "affiliate",
@@ -129,18 +131,25 @@ export function publicHttpUrlHref(value) {
 /**
  * Return true for a single-segment GitHub profile URL without embedded userinfo.
  *
+ * The single path segment must be a real account name, not a GitHub product
+ * surface: `github.com/features`, `github.com/sponsors`, and `github.com/about`
+ * are reserved pages, never user profiles. The reserved set is shared with the
+ * repo-URL parser (`RESERVED_OWNERS`) so the two classifiers stay in sync.
+ *
  * @param {unknown} value
  * @returns {boolean}
  */
 export function isPublicGitHubProfileUrl(value) {
   const url = parseUrl(value);
   if (!url) return false;
+  const segments = url.pathname.split("/").filter(Boolean);
   return (
     url.protocol === "https:" &&
     url.username === "" &&
     url.password === "" &&
     url.hostname === "github.com" &&
-    url.pathname.split("/").filter(Boolean).length === 1
+    segments.length === 1 &&
+    !RESERVED_OWNERS.has(segments[0].toLowerCase())
   );
 }
 

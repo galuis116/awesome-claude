@@ -14,6 +14,7 @@ import {
   publicUrlHostname,
   stripTrackingParams,
 } from "../packages/registry/src/source-url-lib.js";
+import { RESERVED_OWNERS } from "../packages/registry/src/source-repo-lib.js";
 
 const AFFILIATE_PARAMS = [
   "aff",
@@ -113,6 +114,48 @@ describe("public URL userinfo helpers", () => {
       false,
     );
     expect(isPublicGitHubHostUrl("https://gist.github.com/octocat")).toBe(true);
+  });
+
+  it("rejects reserved GitHub product surfaces as profiles", () => {
+    // A single path segment that is a reserved GitHub page is not a user
+    // profile, mirroring how the repo-URL parser rejects reserved owners.
+    for (const surface of [
+      "features",
+      "sponsors",
+      "about",
+      "pricing",
+      "settings",
+      "marketplace",
+      "explore",
+      "security",
+    ]) {
+      expect(isPublicGitHubProfileUrl(`https://github.com/${surface}`)).toBe(
+        false,
+      );
+    }
+  });
+
+  it("matches reserved surfaces case-insensitively", () => {
+    expect(isPublicGitHubProfileUrl("https://github.com/Sponsors")).toBe(false);
+    expect(isPublicGitHubProfileUrl("https://github.com/FEATURES")).toBe(false);
+  });
+
+  it("still accepts an ordinary account whose name is not reserved", () => {
+    expect(isPublicGitHubProfileUrl("https://github.com/octocat")).toBe(true);
+    // A name that merely contains a reserved word is a real account.
+    expect(isPublicGitHubProfileUrl("https://github.com/features-bot")).toBe(
+      true,
+    );
+  });
+
+  it("rejects every reserved owner the repo parser knows about", () => {
+    // Shared source of truth: the profile checker must not drift from the
+    // repo-URL parser's reserved list.
+    for (const owner of RESERVED_OWNERS) {
+      expect(isPublicGitHubProfileUrl(`https://github.com/${owner}`)).toBe(
+        false,
+      );
+    }
   });
 });
 

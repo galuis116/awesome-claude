@@ -25,7 +25,9 @@ const REPO_PATTERN = /^[A-Za-z0-9._-]+$/;
 // customer-stories/*) otherwise slip through as bogus owner/repo pairs, which
 // inflates source-provenance scoring and makes the source-repo signal refresher
 // query repos that cannot exist. Keep lowercase; membership is case-folded.
-const RESERVED_OWNERS = new Set([
+// Exported so the GitHub profile-URL classifier in `source-url-lib.js` rejects
+// the same product surfaces and the two checkers cannot drift apart.
+export const RESERVED_OWNERS = new Set([
   "about",
   "account",
   "apps",
