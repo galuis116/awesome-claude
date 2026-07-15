@@ -12,7 +12,7 @@
         templates, and statuslines.
       </p>
       <p>
-        <strong>1372+ file-backed entries</strong> stay useful as both an
+        <strong>1381+ file-backed entries</strong> stay useful as both an
         awesome-list catalog and a machine-readable registry for builders.
       </p>
       <p>
@@ -36,7 +36,7 @@
       <h3>Registry snapshot</h3>
       <table>
         <tr>
-          <td align="center"><strong>1372</strong><br><sub>entries</sub></td>
+          <td align="center"><strong>1381</strong><br><sub>entries</sub></td>
           <td align="center"><strong>10</strong><br><sub>sections</sub></td>
           <td align="center"><strong>AI-reviewed</strong><br><sub>merge gate</sub></td>
         </tr>
@@ -84,7 +84,7 @@ Refreshed weekly by [`.github/workflows/gittensor-impact.yml`](.github/workflows
         </td>
 <td align="center" width="20%">
           <a href="#tools"><strong>🧰 Tools</strong></a><br>
-          <code>200</code><br>
+          <code>202</code><br>
           <sub>Apps, developer tools, services, and products for Claude-native builders.</sub>
         </td>
 <td align="center" width="20%">
@@ -94,7 +94,7 @@ Refreshed weekly by [`.github/workflows/gittensor-impact.yml`](.github/workflows
         </td>
 <td align="center" width="20%">
           <a href="#rules"><strong>📏 Rules</strong></a><br>
-          <code>83</code><br>
+          <code>90</code><br>
           <sub>Prompt guardrails, project rules, and operating constraints.</sub>
         </td>
 </tr>
@@ -793,7 +793,7 @@ packages use checksums and package trust metadata after review.
 
 Get a free API key on https://app.zyntra.app/
 
-## 🧰 Tools (200)
+## 🧰 Tools (202)
 
 - **[Activepieces](https://heyclau.de/entry/tools/activepieces)** - Open-source, self-hostable workflow automation platform with AI workflows, TypeScript pieces, human-in-the-loop steps, and a built-in MCP server.
 - **[AG2 Agent Framework](https://heyclau.de/entry/tools/ag2-agent-framework)** - Open-source Python AgentOS and multi-agent framework, evolved from AutoGen, for building conversable agents, group chats, swarms, human-in-the-loop workflows, tool use, RAG, code execution, and provider-backed agent systems.
@@ -866,6 +866,7 @@ Get a free API key on https://app.zyntra.app/
 - **[Google Agent Development Kit](https://heyclau.de/entry/tools/google-agent-development-kit)** - Apache-2.0 code-first toolkit for building, running, evaluating, and deploying AI agents, workflows, tools, sessions, and multi-agent systems.
 - **[Google Workspace CLI](https://heyclau.de/entry/tools/google-workspace-cli)** - Apache-2.0 `gws` command-line tool for Google Workspace APIs with structured JSON output, dynamic Discovery API commands, npm and release installers, Gemini CLI extension metadata, and 100+ bundled Agent Skills.
 - **[Goose](https://heyclau.de/entry/tools/goose)** - Open-source, extensible AI agent that goes beyond code suggestions to install, execute, edit, and test with any LLM, available as a desktop app, CLI, and API with 70+ MCP extensions.
+- **[GPTCache](https://heyclau.de/entry/tools/gptcache)** - Open-source semantic cache for LLM applications that stores and reuses model responses through embedding similarity to cut API cost and latency, with modular embedding, vector-store, cache-storage, and eviction components.
 - **[Gradio](https://heyclau.de/entry/tools/gradio)** - Apache-2.0 Python framework for building and sharing machine-learning demos, AI web apps, model interfaces, chatbots, API front ends, and interactive evaluation tools.
 - **[Graphite Diamond](https://heyclau.de/entry/tools/graphite-diamond)** - AI code review assistant for pull requests, engineering feedback, and review workflow acceleration inside Graphite.
 - **[Great Expectations](https://heyclau.de/entry/tools/great-expectations)** - Apache-2.0 GX Core Python library for data quality Expectations, validation definitions, checkpoints, Data Docs, metadata stores, and pipeline quality checks.
@@ -947,6 +948,7 @@ Get a free API key on https://app.zyntra.app/
 - **[OpenHands](https://heyclau.de/entry/tools/openhands)** - AI-driven software development platform with a local GUI, CLI, Software Agent SDK, agent sandboxes, terminal/browser tools, and hosted cloud options.
 - **[OpenSandbox](https://heyclau.de/entry/tools/opensandbox)** - Apache-2.0 sandbox runtime and SDK suite for AI agents, with Python, Java/Kotlin, JavaScript/TypeScript, C#/.NET, and Go SDKs, Docker and Kubernetes runtimes, OpenSandbox MCP server, CLI, code interpreter, filesystem and command tools, network policy, credential vault, and secure container runtime guidance.
 - **[Outlines](https://heyclau.de/entry/tools/outlines)** - Open-source Python library from dottxt for structured LLM generation, guaranteeing outputs that match a JSON schema, Pydantic model, regex, grammar, or multiple-choice set during generation across many model backends.
+- **[Pipecat](https://heyclau.de/entry/tools/pipecat)** - Open-source Python framework for building real-time voice and multimodal conversational agents, orchestrating speech-to-text, LLM, text-to-speech, voice activity detection, and transports as a composable pipeline with pluggable providers.
 - **[Pipedream](https://heyclau.de/entry/tools/pipedream)** - Workflow automation platform for connecting APIs, building event-driven automations, and integrating developer tools.
 - **[Polars](https://heyclau.de/entry/tools/polars)** - MIT-licensed DataFrame query engine written in Rust for Python, Rust, Node.js, R, and SQL workflows with lazy execution, streaming, Arrow integration, and file, database, and cloud I/O.
 - **[Portkey AI Gateway](https://heyclau.de/entry/tools/portkey-ai-gateway)** - Open-source AI gateway from Portkey for routing to 1600+ LLMs through one OpenAI-compatible API, with automatic retries, fallbacks, load balancing, conditional routing, guardrails, caching, and observability, self-hostable via npx, Docker, or edge deployments.
@@ -1176,15 +1178,22 @@ Get a free API key on https://app.zyntra.app/
 - **[Zero-Budget SaaS Launch Capability Pack Skill](https://heyclau.de/entry/skills/zero-budget-saas-launch-capability-pack)** - Expert zero-budget launch capability pack for building and shipping SaaS using free-tier infrastructure and constrained execution plans.
 - **[Zod Schema Validation Skill](https://heyclau.de/entry/skills/zod-schema-validator)** - TypeScript-first validation skill using Zod — define schemas once, get runtime checks and inferred types for APIs, forms, and data pipelines.
 
-## 📏 Rules (83)
+## 📏 Rules (90)
 
 - **[AI Assistant Secret Handling Rules](https://heyclau.de/entry/rules/ai-assistant-secret-handling-rules)** - Source-backed rules for AI coding assistants that must avoid exposing, copying, logging, committing, or normalizing secrets while editing code, configs, tests, prompts, documentation, and CI workflows.
+- **[AI-Generated OS Command Injection Review Rules](https://heyclau.de/entry/rules/ai-generated-command-injection-review-rules)** - Source-backed rules for reviewing AI-generated code that builds or runs operating-system commands, shell invocations, or subprocesses before merge for command injection and argument injection risk, covering library alternatives to shelling out, array-form process APIs, allowlist input validation, and least-privilege execution.
 - **[AI-Generated CSRF Protection Review Rules](https://heyclau.de/entry/rules/ai-generated-csrf-protection-review-rules)** - Source-backed rules for reviewing AI-generated request handlers and forms before merge for cross-site request forgery risk, covering state-changing method discipline, anti-CSRF token correctness, SameSite cookie posture, origin and referer checks, and safe handling of cookie-based sessions.
 - **[AI-Generated Frontend Accessibility Review Rules](https://heyclau.de/entry/rules/ai-generated-frontend-accessibility-review-rules)** - Source-backed rules for reviewing AI-generated frontend UI changes for accessibility before merge, with semantic HTML, keyboard paths, focus management, labels, automated scan limits, manual checks, and privacy-safe evidence.
+- **[AI-Generated IDOR (Broken Object-Level Authorization) Review Rules](https://heyclau.de/entry/rules/ai-generated-idor-review-rules)** - Source-backed rules for reviewing AI-generated endpoints and data-access code before merge for insecure direct object reference risk, covering per-request object-level authorization checks, scoped database lookups, identifier exposure, and consistent enforcement across read, write, and admin operations.
+- **[AI-Generated Insecure Deserialization Review Rules](https://heyclau.de/entry/rules/ai-generated-insecure-deserialization-review-rules)** - Source-backed rules for reviewing AI-generated code that deserializes data before merge for insecure deserialization risk, covering native serialization formats (pickle, PyYAML, Java Serializable) that can execute arbitrary code on untrusted input, safe data-interchange alternatives, and class allowlisting/integrity checks when native formats can't be avoided.
+- **[AI-Generated Mass Assignment Review Rules](https://heyclau.de/entry/rules/ai-generated-mass-assignment-review-rules)** - Source-backed rules for reviewing AI-generated code that binds request parameters to model/entity objects before merge for mass assignment risk, covering allowlist field binding, DTOs that exclude sensitive fields, and the framework-specific autobinding features that make this easy to introduce by default.
+- **[AI-Generated Open Redirect Review Rules](https://heyclau.de/entry/rules/ai-generated-open-redirect-review-rules)** - Source-backed rules for reviewing AI-generated redirect and forward logic before merge for open redirect risk, covering allowlist-based destination validation, relative-path/indexed-mapping alternatives to raw URLs, and the privilege-escalation and phishing impact of an unvalidated redirect target.
 - **[AI-Generated Path Traversal Review Rules](https://heyclau.de/entry/rules/ai-generated-path-traversal-review-rules)** - Source-backed rules for reviewing AI-generated file-handling code for path traversal before merge, covering canonical path validation, safe root confinement, upload filename sanitization, archive extraction limits, and privacy-safe test evidence.
+- **[AI-Generated Prototype Pollution Review Rules](https://heyclau.de/entry/rules/ai-generated-prototype-pollution-review-rules)** - Source-backed rules for reviewing AI-generated JavaScript/TypeScript code before merge for prototype pollution risk, covering unsafe recursive merge/clone/assign helpers on untrusted input, proto and constructor-prototype key handling, and safer alternatives like Map, Set, and Object.create(null).
 - **[AI-Generated Regex Safety Review Rules](https://heyclau.de/entry/rules/ai-generated-regex-safety-review-rules)** - Source-backed rules for reviewing AI-generated regular expressions before merge, covering catastrophic backtracking and ReDoS risk, input bounds, anchor and escaping correctness, validation versus parsing, safe engines, and privacy-safe test evidence.
 - **[AI-Generated SQL Injection Review Rules](https://heyclau.de/entry/rules/ai-generated-sql-injection-review-rules)** - Source-backed rules for reviewing AI-generated database access code for SQL injection before merge, covering parameterized queries, identifier handling, ORM safety, dynamic query construction, least-privilege access, and privacy-safe test evidence.
 - **[AI-Generated SSRF Review Rules](https://heyclau.de/entry/rules/ai-generated-ssrf-review-rules)** - Source-backed rules for reviewing AI-generated code that makes server-side URL or network requests for server-side request forgery before merge, covering URL allow-lists, block-lists for internal networks, redirect handling, response isolation, and privacy-safe test evidence.
+- **[AI-Generated XSS (Cross-Site Scripting) Review Rules](https://heyclau.de/entry/rules/ai-generated-xss-review-rules)** - Source-backed rules for reviewing AI-generated code that renders untrusted data into HTML, JavaScript, URLs, or CSS before merge for cross-site scripting risk, covering context-correct output encoding, dangerous DOM sinks, HTML sanitization, and Content-Security-Policy as defense in depth.
 - **[AI Prompt Engineering Expert for Claude](https://heyclau.de/entry/rules/ai-prompt-engineering-expert)** - A CLAUDE.md rule set that turns Claude into a prompt-engineering reviewer for coding work — enforcing explicit requirements, task decomposition, example-driven prompts, and context management.
 - **[Angular Expert - CLAUDE.md Rules for Claude Code](https://heyclau.de/entry/rules/angular-expert)** - Transform Claude into an Angular specialist with deep knowledge of standalone components, Angular Signals, dependency injection, RxJS patterns, and the Angular Style Guide.
 - **[API Design Expert for Claude - CLAUDE.md Rules for Claude Code](https://heyclau.de/entry/rules/api-design-expert)** - Transform Claude into a comprehensive API design specialist focused on RESTful APIs, GraphQL, OpenAPI, and modern API architecture patterns
