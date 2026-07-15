@@ -260,6 +260,25 @@ describe("buildDiscoverySurfaceLists recentlyVerified", () => {
       "older-review",
     ]);
   });
+
+  it("falls back to an empty verification date when no verification signal is present", () => {
+    const surfaces = buildDiscoverySurfaceLists([
+      entry("undated-package", {
+        packageVerified: true,
+        dateAdded: undefined,
+        trustSignals: null,
+      }),
+      entry("dated-package", {
+        packageVerified: true,
+        verifiedAt: "2026-05-15",
+      }),
+    ]);
+
+    expect(slugs(surfaces.recentlyVerified)).toEqual([
+      "dated-package",
+      "undated-package",
+    ]);
+  });
 });
 
 describe("buildDiscoverySurfaceLists sourceBacked", () => {
@@ -299,6 +318,26 @@ describe("buildDiscoverySurfaceLists sourceBacked", () => {
     ]);
 
     expect(slugs(surfaces.sourceBacked)).toEqual(["newer", "older"]);
+  });
+
+  it("breaks star ties without throwing when dateAdded is missing on both sides", () => {
+    const surfaces = buildDiscoverySurfaceLists([
+      entry("undated-a", {
+        githubStars: 40,
+        dateAdded: undefined,
+        trustSignals: { sourceStatus: "available" },
+      }),
+      entry("undated-b", {
+        githubStars: 40,
+        dateAdded: undefined,
+        trustSignals: { sourceStatus: "available" },
+      }),
+    ]);
+
+    expect(slugs(surfaces.sourceBacked).sort()).toEqual([
+      "undated-a",
+      "undated-b",
+    ]);
   });
 });
 
@@ -367,6 +406,26 @@ describe("buildDiscoverySurfaceLists safeInstall", () => {
     ]);
 
     expect(slugs(surfaces.safeInstall)).toEqual(["newer", "older"]);
+  });
+
+  it("breaks safe-install score ties without throwing when dateAdded is missing", () => {
+    const surfaces = buildDiscoverySurfaceLists([
+      entry("undated-a", {
+        installCommand: "npx a",
+        downloadTrust: "first-party",
+        dateAdded: undefined,
+      }),
+      entry("undated-b", {
+        installCommand: "npx b",
+        downloadTrust: "first-party",
+        dateAdded: undefined,
+      }),
+    ]);
+
+    expect(slugs(surfaces.safeInstall).sort()).toEqual([
+      "undated-a",
+      "undated-b",
+    ]);
   });
 });
 
