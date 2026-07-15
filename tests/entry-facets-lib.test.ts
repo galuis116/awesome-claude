@@ -23,7 +23,7 @@ describe("facetsFor", () => {
     expect(facetsFor(entry({ category: "hooks" }))).toEqual([]);
   });
 
-  it("maps command syntax to a monospace Invocation facet", () => {
+  it("maps command syntax to a monospace Invocation facet, or [] when absent", () => {
     const [facet] = facetsFor(
       entry({ category: "commands", commandSyntax: "/review" }),
     );
@@ -32,14 +32,16 @@ describe("facetsFor", () => {
       value: "/review",
       mono: true,
     });
+    expect(facetsFor(entry({ category: "commands" }))).toEqual([]);
   });
 
-  it("maps a statusline script language to a Language facet", () => {
+  it("maps a statusline script language to a Language facet, or [] when absent", () => {
     const [facet] = facetsFor(
       entry({ category: "statuslines", scriptLanguage: "bash" }),
     );
     expect(facet.label).toBe("Language");
     expect(facet.value).toBe("bash");
+    expect(facetsFor(entry({ category: "statuslines" }))).toEqual([]);
   });
 
   it("collects the present skill fields, skipping absent ones", () => {
@@ -47,10 +49,11 @@ describe("facetsFor", () => {
       entry({
         category: "skills",
         skillLevel: "advanced",
+        skillType: "general",
         verificationStatus: "production",
       }),
     );
-    expect(facets.map((f) => f.label)).toEqual(["Level", "Verified"]);
+    expect(facets.map((f) => f.label)).toEqual(["Level", "Type", "Verified"]);
     expect(facetsFor(entry({ category: "skills" }))).toEqual([]);
   });
 
