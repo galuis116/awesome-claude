@@ -27,8 +27,16 @@ import { cn } from "@/lib/utils";
 import { absoluteUrl } from "@/lib/seo";
 import { trackEvent } from "@/lib/analytics";
 import {
+  submitCategorySelectAnalyticsData,
+  submitCategorySelectAnalyticsEvent,
+  submitEgressAnalyticsData,
+  submitEgressAnalyticsEvent,
+  submitPreflightRetryAnalyticsData,
+  submitPreflightRetryAnalyticsEvent,
   submitStartAnalyticsData,
   submitStartAnalyticsEvent,
+  submitStepAnalyticsData,
+  submitStepAnalyticsEvent,
   submitSuccessAnalyticsData,
   submitSuccessAnalyticsEvent,
 } from "@/lib/submit-cta-events";
@@ -284,11 +292,23 @@ function SubmitPage() {
       <p className="mt-2 text-sm text-ink-muted">
         Free, source-backed, useful. The site opens a single-entry GitHub PR for private-gate
         review. Commercial tools go through{" "}
-        <a href="/advertise" className="text-ink underline">
+        <a
+          href="/advertise"
+          className="text-ink underline"
+          onClick={() =>
+            trackEvent(submitEgressAnalyticsEvent(), submitEgressAnalyticsData("advertise"))
+          }
+        >
           advertise
         </a>
         . Jobs go through{" "}
-        <a href="/jobs/post" className="text-ink underline">
+        <a
+          href="/jobs/post"
+          className="text-ink underline"
+          onClick={() =>
+            trackEvent(submitEgressAnalyticsEvent(), submitEgressAnalyticsData("jobs-post"))
+          }
+        >
           post a job
         </a>
         .
@@ -314,7 +334,12 @@ function SubmitPage() {
           e.preventDefault();
           if (!canContinue) return;
           if (step < STEPS.length - 1) {
-            setStep((s) => s + 1);
+            const toStep = step + 1;
+            trackEvent(
+              submitStepAnalyticsEvent(),
+              submitStepAnalyticsData("continue", step, toStep, category || "", STEPS.length),
+            );
+            setStep(toStep);
             return;
           }
           if (!preflightResult) {
@@ -337,6 +362,10 @@ function SubmitPage() {
                     key={c.id}
                     type="button"
                     onClick={() => {
+                      trackEvent(
+                        submitCategorySelectAnalyticsEvent(),
+                        submitCategorySelectAnalyticsData(c.id, disabled, CATEGORIES.length),
+                      );
                       setCategory(c.id);
                       setData({});
                       setPreflightResult(null);
@@ -368,7 +397,13 @@ function SubmitPage() {
             {unsupportedWebCategory && (
               <div className="mt-4 rounded-md border border-border bg-background p-3 text-xs text-ink-muted">
                 This category is not enabled for website-created PRs yet. Use{" "}
-                <a href="/advertise" className="text-ink underline">
+                <a
+                  href="/advertise"
+                  className="text-ink underline"
+                  onClick={() =>
+                    trackEvent(submitEgressAnalyticsEvent(), submitEgressAnalyticsData("advertise"))
+                  }
+                >
                   commercial intake
                 </a>{" "}
                 for tools or contact a maintainer for special routing.
@@ -438,7 +473,13 @@ function SubmitPage() {
               result={preflightResult}
               error={preflightError}
               busy={preflightBusy}
-              onRun={() => void runServerPreflight()}
+              onRun={() => {
+                trackEvent(
+                  submitPreflightRetryAnalyticsEvent(),
+                  submitPreflightRetryAnalyticsData(category || "", step),
+                );
+                void runServerPreflight();
+              }}
             />
 
             <div>
@@ -466,7 +507,15 @@ function SubmitPage() {
         <div className="mt-6 flex items-center justify-between gap-2">
           <button
             type="button"
-            onClick={() => setStep((s) => Math.max(0, s - 1))}
+            onClick={() => {
+              if (step === 0) return;
+              const toStep = step - 1;
+              trackEvent(
+                submitStepAnalyticsEvent(),
+                submitStepAnalyticsData("back", step, toStep, category || "", STEPS.length),
+              );
+              setStep(toStep);
+            }}
             disabled={step === 0}
             className="text-sm text-ink-muted hover:text-ink disabled:opacity-40"
           >

@@ -1,8 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
   CLAIM_PAGE_SURFACE,
+  claimPageChangeListingAnalyticsData,
+  claimPageChangeListingAnalyticsEvent,
+  claimPageEgressAnalyticsData,
+  claimPageEgressAnalyticsEvent,
   claimPageEntrySelectAnalyticsData,
   claimPageEntrySelectAnalyticsEvent,
+  claimPageFileAnalyticsData,
+  claimPageFileAnalyticsEvent,
+  claimPageResetAnalyticsData,
+  claimPageResetAnalyticsEvent,
   claimPageSubmitAnalyticsData,
   claimPageSubmitAnalyticsEvent,
   claimPageTypeSelectAnalyticsData,
@@ -28,6 +36,33 @@ describe("claim page cta events lib", () => {
       entry: "mcp/browser",
       rowIndex: 1,
       resultCount: 6,
+    });
+  });
+
+  it("builds claim page reset, change, egress, and file analytics", () => {
+    expect(claimPageChangeListingAnalyticsEvent()).toBe(
+      "claim_page_change_listing_click",
+    );
+    expect(claimPageChangeListingAnalyticsData("agents", "demo")).toEqual({
+      surface: CLAIM_PAGE_SURFACE,
+      entry: "agents/demo",
+    });
+    expect(claimPageResetAnalyticsEvent()).toBe("claim_page_reset_click");
+    expect(claimPageResetAnalyticsData()).toEqual({
+      surface: CLAIM_PAGE_SURFACE,
+    });
+    expect(claimPageEgressAnalyticsEvent()).toBe("claim_page_egress_click");
+    expect(claimPageEgressAnalyticsData("submit")).toEqual({
+      surface: CLAIM_PAGE_SURFACE,
+      destination: "submit",
+    });
+    expect(claimPageFileAnalyticsEvent()).toBe("claim_page_file_click");
+    expect(claimPageFileAnalyticsData("maintain", "success", 4, 3)).toEqual({
+      surface: CLAIM_PAGE_SURFACE,
+      type: "maintain",
+      outcome: "success",
+      proofFieldCount: 4,
+      filledProofCount: 3,
     });
   });
 });

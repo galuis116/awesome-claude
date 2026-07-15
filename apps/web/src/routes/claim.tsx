@@ -5,10 +5,16 @@ import { ENTRIES } from "@/data/entries";
 import { resolveClaimWebsiteUrl } from "@/lib/claim-website-url-lib";
 import { trackEvent } from "@/lib/analytics";
 import {
+  claimPageChangeListingAnalyticsData,
+  claimPageChangeListingAnalyticsEvent,
+  claimPageEgressAnalyticsData,
+  claimPageEgressAnalyticsEvent,
   claimPageEntrySelectAnalyticsData,
   claimPageEntrySelectAnalyticsEvent,
-  claimPageSubmitAnalyticsData,
-  claimPageSubmitAnalyticsEvent,
+  claimPageFileAnalyticsData,
+  claimPageFileAnalyticsEvent,
+  claimPageResetAnalyticsData,
+  claimPageResetAnalyticsEvent,
   claimPageTypeSelectAnalyticsData,
   claimPageTypeSelectAnalyticsEvent,
 } from "@/lib/claim-page-cta-events";
@@ -172,6 +178,10 @@ function ClaimPage() {
     if (!picked || !contactEmail || submitting) return;
     setSubmitting(true);
     setError("");
+    trackEvent(
+      claimPageFileAnalyticsEvent(),
+      claimPageFileAnalyticsData(type, "intent", PROOF_FIELDS.length, filled.length),
+    );
     const proofLines = PROOF_FIELDS.filter((field) => field.id !== "email")
       .map((field) => {
         const value = (proof[field.id] ?? "").trim();
@@ -199,8 +209,16 @@ function ClaimPage() {
         }),
       });
       if (!response.ok) throw new Error(`Claim intake returned ${response.status}`);
+      trackEvent(
+        claimPageFileAnalyticsEvent(),
+        claimPageFileAnalyticsData(type, "success", PROOF_FIELDS.length, filled.length),
+      );
       setDone(true);
     } catch {
+      trackEvent(
+        claimPageFileAnalyticsEvent(),
+        claimPageFileAnalyticsData(type, "error", PROOF_FIELDS.length, filled.length),
+      );
       setError("Claim could not be submitted. Check the required fields and try again.");
     } finally {
       setSubmitting(false);
@@ -221,6 +239,7 @@ function ClaimPage() {
         <button
           type="button"
           onClick={() => {
+            trackEvent(claimPageResetAnalyticsEvent(), claimPageResetAnalyticsData());
             setDone(false);
             setPicked(null);
             setQuery("");
@@ -264,6 +283,10 @@ function ClaimPage() {
                   <button
                     type="button"
                     onClick={() => {
+                      trackEvent(
+                        claimPageChangeListingAnalyticsEvent(),
+                        claimPageChangeListingAnalyticsData(picked.category, picked.slug),
+                      );
                       setPicked(null);
                       setQuery("");
                     }}
@@ -472,7 +495,7 @@ function ClaimPage() {
             to="/submit"
             className="text-ink hover:underline"
             onClick={() =>
-              trackEvent(claimPageSubmitAnalyticsEvent(), claimPageSubmitAnalyticsData())
+              trackEvent(claimPageEgressAnalyticsEvent(), claimPageEgressAnalyticsData("submit"))
             }
           >
             Submit a resource →

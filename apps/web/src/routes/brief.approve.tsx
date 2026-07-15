@@ -2,6 +2,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { useState, type ReactNode } from "react";
 import { z } from "zod";
+import { trackEvent } from "@/lib/analytics";
+import {
+  briefApproveActionAnalyticsData,
+  briefApproveActionAnalyticsEvent,
+  briefApproveEgressAnalyticsData,
+  briefApproveEgressAnalyticsEvent,
+} from "@/lib/brief-approve-cta-events";
 
 const tokenInput = z.object({ token: z.string() });
 const confirmInput = z.object({
@@ -118,12 +125,36 @@ function ApprovePage() {
           type="button"
           disabled={state.phase === "working"}
           onClick={async () => {
+            const hasNote = note.trim().length > 0;
+            trackEvent(
+              briefApproveActionAnalyticsEvent(),
+              briefApproveActionAnalyticsData("approve", "intent", hasNote),
+            );
             setState({ phase: "working" });
             try {
               const res = await confirmApprove({ data: { token, note } });
-              if (res.ok) setState({ phase: "done", scheduledSendAt: res.scheduledSendAt });
-              else setState({ phase: "error", reason: res.reason });
+              if (res.ok) {
+                trackEvent(
+                  briefApproveActionAnalyticsEvent(),
+                  briefApproveActionAnalyticsData("approve", "success", hasNote),
+                );
+                setState({ phase: "done", scheduledSendAt: res.scheduledSendAt });
+              } else {
+                trackEvent(
+                  briefApproveActionAnalyticsEvent(),
+                  briefApproveActionAnalyticsData(
+                    "approve",
+                    res.reason === "already" ? "already" : "error",
+                    hasNote,
+                  ),
+                );
+                setState({ phase: "error", reason: res.reason });
+              }
             } catch {
+              trackEvent(
+                briefApproveActionAnalyticsEvent(),
+                briefApproveActionAnalyticsData("approve", "error", hasNote),
+              );
               setState({ phase: "error", reason: "error" });
             }
           }}
@@ -142,7 +173,13 @@ function Shell({ heading, children }: { heading: string; children: ReactNode }) 
       <div className="eyebrow text-ink-subtle">Weekly Brief</div>
       <h1 className="mt-2 h-display-2 text-ink">{heading}</h1>
       <p className="mt-4 text-pretty text-ink-muted">{children}</p>
-      <Link to="/brief" className="mt-8 inline-block text-sm text-ink-muted hover:text-ink">
+      <Link
+        to="/brief"
+        onClick={() =>
+          trackEvent(briefApproveEgressAnalyticsEvent(), briefApproveEgressAnalyticsData("brief"))
+        }
+        className="mt-8 inline-block text-sm text-ink-muted hover:text-ink"
+      >
         ← Back to the Weekly Brief
       </Link>
     </div>
