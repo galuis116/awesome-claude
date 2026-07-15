@@ -1,13 +1,16 @@
 /**
  * Pure submit flow analytics helpers.
  *
- * Maps submission start and success events to privacy-light payloads without
+ * Maps wizard navigation, category selection, preflight retry, commercial
+ * egress, and submit start/success events to privacy-light payloads without
  * embedding entry titles, slugs, or form field content.
  */
 
 export const SUBMIT_SURFACE = "submit";
 
 export type SubmitSuccessPath = "manual" | "gate";
+export type SubmitStepDirection = "back" | "continue";
+export type SubmitEgressDestination = "advertise" | "jobs-post";
 
 export function submitStartAnalyticsEvent(): string {
   return "submit_start";
@@ -30,5 +33,66 @@ export function submitSuccessAnalyticsData(category: string, path: SubmitSuccess
     surface: SUBMIT_SURFACE,
     category,
     path,
+  };
+}
+
+export function submitCategorySelectAnalyticsEvent(): string {
+  return "submit_category_select";
+}
+
+export function submitCategorySelectAnalyticsData(
+  category: string,
+  webOnly: boolean,
+  categoryCount: number,
+) {
+  return {
+    surface: SUBMIT_SURFACE,
+    category,
+    webOnly,
+    categoryCount,
+  };
+}
+
+export function submitStepAnalyticsEvent(): string {
+  return "submit_step_click";
+}
+
+export function submitStepAnalyticsData(
+  direction: SubmitStepDirection,
+  fromStep: number,
+  toStep: number,
+  category: string,
+  stepCount: number,
+) {
+  return {
+    surface: SUBMIT_SURFACE,
+    direction,
+    fromStep,
+    toStep,
+    category,
+    stepCount,
+  };
+}
+
+export function submitPreflightRetryAnalyticsEvent(): string {
+  return "submit_preflight_retry_click";
+}
+
+export function submitPreflightRetryAnalyticsData(category: string, step: number) {
+  return {
+    surface: SUBMIT_SURFACE,
+    category,
+    step,
+  };
+}
+
+export function submitEgressAnalyticsEvent(): string {
+  return "submit_egress_click";
+}
+
+export function submitEgressAnalyticsData(destination: SubmitEgressDestination) {
+  return {
+    surface: SUBMIT_SURFACE,
+    destination,
   };
 }
