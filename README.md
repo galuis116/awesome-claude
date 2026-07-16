@@ -12,7 +12,7 @@
         templates, and statuslines.
       </p>
       <p>
-        <strong>1382+ file-backed entries</strong> stay useful as both an
+        <strong>1383+ file-backed entries</strong> stay useful as both an
         awesome-list catalog and a machine-readable registry for builders.
       </p>
       <p>
@@ -36,7 +36,7 @@
       <h3>Registry snapshot</h3>
       <table>
         <tr>
-          <td align="center"><strong>1382</strong><br><sub>entries</sub></td>
+          <td align="center"><strong>1383</strong><br><sub>entries</sub></td>
           <td align="center"><strong>10</strong><br><sub>sections</sub></td>
           <td align="center"><strong>AI-reviewed</strong><br><sub>merge gate</sub></td>
         </tr>
@@ -84,7 +84,7 @@ Refreshed weekly by [`.github/workflows/gittensor-impact.yml`](.github/workflows
         </td>
 <td align="center" width="20%">
           <a href="#tools"><strong>🧰 Tools</strong></a><br>
-          <code>203</code><br>
+          <code>204</code><br>
           <sub>Apps, developer tools, services, and products for Claude-native builders.</sub>
         </td>
 <td align="center" width="20%">
@@ -793,7 +793,7 @@ packages use checksums and package trust metadata after review.
 
 Get a free API key on https://app.zyntra.app/
 
-## 🧰 Tools (203)
+## 🧰 Tools (204)
 
 - **[Activepieces](https://heyclau.de/entry/tools/activepieces)** - Open-source, self-hostable workflow automation platform with AI workflows, TypeScript pieces, human-in-the-loop steps, and a built-in MCP server.
 - **[AG2 Agent Framework](https://heyclau.de/entry/tools/ag2-agent-framework)** - Open-source Python AgentOS and multi-agent framework, evolved from AutoGen, for building conversable agents, group chats, swarms, human-in-the-loop workflows, tool use, RAG, code execution, and provider-backed agent systems.
@@ -901,6 +901,7 @@ Get a free API key on https://app.zyntra.app/
 - **[Letta](https://heyclau.de/entry/tools/letta)** - Open-source platform for stateful agents with long-term memory, Letta Code local CLI agents, hosted Letta API agents, Python and TypeScript clients, skills, subagents, custom tools, MCP dependencies, and persistent agent state.
 - **[LibreChat](https://heyclau.de/entry/tools/librechat)** - Self-hosted AI chat and agent platform with LibreChat Agents, MCP support, reusable Skills, Subagents, Code Interpreter, web search, artifacts, multi-provider model routing, secure multi-user auth, and Docker Compose deployment.
 - **[LiteLLM](https://heyclau.de/entry/tools/litellm)** - Open-source AI gateway and Python SDK for routing LLM calls through a unified OpenAI-compatible interface.
+- **[LitServe](https://heyclau.de/entry/tools/litserve)** - Lightweight open-source serving framework for building custom AI model inference APIs by defining a LitAPI with setup and predict methods, with batching, streaming, multi-GPU autoscaling, OpenAI-compatible endpoints, and support for compound, multimodal, RAG, and agent pipelines.
 - **[LiveKit Agents](https://heyclau.de/entry/tools/livekit-agents)** - Open-source framework for building realtime voice, video, and multimodal AI agents with LiveKit rooms, STT, LLMs, TTS, job scheduling, telephony, MCP tools, testing, and production deployment paths.
 - **[llama.cpp](https://heyclau.de/entry/tools/llama-cpp)** - MIT-licensed C/C++ LLM inference runtime for running GGUF models locally or through a lightweight OpenAI-compatible llama-server.
 - **[LlamaIndex](https://heyclau.de/entry/tools/llamaindex)** - Open-source framework for building agentic LLM applications over private data with ingestion, indexes, retrieval, RAG, tools, workflows, and evaluation.
