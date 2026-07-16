@@ -1,8 +1,9 @@
 /**
  * Pure tools submit page navigation analytics helpers.
  *
- * Maps breadcrumb, community submit, and commercial path egress to privacy-light
- * event names without embedding form content, URLs, or contact details.
+ * Maps breadcrumb, community submit, commercial path egress, and lead-form
+ * submit clicks to privacy-light event names without embedding form content,
+ * URLs, or contact details.
  */
 
 export const TOOLS_SUBMIT_PAGE_SURFACE = "tools-submit-page";
@@ -50,5 +51,31 @@ export function toolsSubmitClaimAnalyticsData(source: ToolsSubmitCommercialSourc
   return {
     surface: TOOLS_SUBMIT_PAGE_SURFACE,
     source,
+  };
+}
+
+export type ToolsSubmitListingTier = "featured" | "sponsored";
+
+export function toolsSubmitListingSubmitAnalyticsEvent(): string {
+  return "tools_submit_listing_submit_click";
+}
+
+export function toolsSubmitListingSubmitAnalyticsData(tierInterest: ToolsSubmitListingTier) {
+  return {
+    surface: TOOLS_SUBMIT_PAGE_SURFACE,
+    form: "listing" as const,
+    tierInterest,
+  };
+}
+
+export function toolsSubmitReviewSubmitAnalyticsEvent(): string {
+  return "tools_submit_review_submit_click";
+}
+
+export function toolsSubmitReviewSubmitAnalyticsData(hasEntryRef: boolean) {
+  return {
+    surface: TOOLS_SUBMIT_PAGE_SURFACE,
+    form: "paid-review" as const,
+    hasEntryRef,
   };
 }

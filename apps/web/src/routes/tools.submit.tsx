@@ -14,6 +14,10 @@ import {
   toolsSubmitClaimAnalyticsEvent,
   toolsSubmitCommunityAnalyticsData,
   toolsSubmitCommunityAnalyticsEvent,
+  toolsSubmitListingSubmitAnalyticsData,
+  toolsSubmitListingSubmitAnalyticsEvent,
+  toolsSubmitReviewSubmitAnalyticsData,
+  toolsSubmitReviewSubmitAnalyticsEvent,
   toolsSubmitToolsAnalyticsData,
   toolsSubmitToolsAnalyticsEvent,
 } from "@/lib/tools-submit-page-cta-events";
@@ -120,13 +124,18 @@ function CommercialToolListingForm() {
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (submitting) return;
+    const form = new FormData(e.currentTarget);
+    const tierInterest = toolListingTierInterest(form.get("tierInterest"));
+    trackEvent(
+      toolsSubmitListingSubmitAnalyticsEvent(),
+      toolsSubmitListingSubmitAnalyticsData(tierInterest),
+    );
     setSubmitting(true);
     setError("");
-    const form = new FormData(e.currentTarget);
     try {
       await submitListingLead({
         kind: "tool",
-        tierInterest: toolListingTierInterest(form.get("tierInterest")),
+        tierInterest,
         contactName: String(form.get("contactName") ?? "").trim(),
         contactEmail: String(form.get("email") ?? "").trim(),
         companyName: String(form.get("company") ?? "").trim(),
@@ -209,10 +218,14 @@ function PaidReviewInterestForm() {
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (submitting) return;
-    setSubmitting(true);
-    setError("");
     const form = new FormData(e.currentTarget);
     const entryRef = String(form.get("entryRef") ?? "").trim();
+    trackEvent(
+      toolsSubmitReviewSubmitAnalyticsEvent(),
+      toolsSubmitReviewSubmitAnalyticsData(Boolean(entryRef)),
+    );
+    setSubmitting(true);
+    setError("");
     const notes = String(form.get("notes") ?? "").trim();
     try {
       await submitListingLead({
