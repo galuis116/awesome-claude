@@ -326,8 +326,8 @@ function ChangelogPage() {
               Poll the diff endpoint or subscribe via your feed reader. Every payload carries a
               SHA-256.
             </p>
-            <pre className="mt-3 overflow-x-auto rounded-md bg-background p-3 font-mono text-[11px] text-ink">
-              <div className="mb-2 flex justify-end">
+            <div className="mt-3 overflow-hidden rounded-md bg-background">
+              <div className="flex justify-end border-b border-border px-3 py-1.5">
                 <CopyButton
                   value="curl https://heyclau.de/api/registry/diff?since=2026-05-19"
                   label="Copy"
@@ -336,8 +336,10 @@ function ChangelogPage() {
                   eventData={changelogPollCopyAnalyticsData(items.length)}
                 />
               </div>
-              {`curl https://heyclau.de/api/registry/diff?since=2026-05-19`}
-            </pre>
+              <pre className="overflow-x-auto p-3 font-mono text-[11px] text-ink">
+                {`curl https://heyclau.de/api/registry/diff?since=2026-05-19`}
+              </pre>
+            </div>
           </div>
 
           <div className="rounded-xl border border-border bg-surface p-5">
