@@ -131,6 +131,14 @@ describe("getEmbeddedSectionType", () => {
     expect(getEmbeddedSectionType("<p>section type: fake</p>")).toBeNull();
   });
 
+  it("returns null when the marker sits between two separate comments", () => {
+    expect(
+      getEmbeddedSectionType(
+        "<!-- unrelated -->plain section type: css<!-- trailer -->",
+      ),
+    ).toBeNull();
+  });
+
   it("reads the inner marker when comments are nested", () => {
     expect(
       getEmbeddedSectionType(
@@ -742,4 +750,37 @@ describe("isEssentialVariant and getSectionEyebrow", () => {
   it.each(labels)("maps variant %j to eyebrow %j", (variant, label) => {
     expect(getSectionEyebrow(variant)).toBe(label);
   });
+});
+
+describe("extractSectionSubitems id attribute parsing", () => {
+  it("ignores an id-like attribute name that is only a substring, such as data-id", () => {
+    const html = '<h3 data-id="not-the-id">Heading</h3><p>Body</p>';
+    expect(extractSectionSubitems(html, "sec")).toEqual([
+      { id: "sec-1", title: "Heading", html: "<p>Body</p>" },
+    ]);
+  });
+
+  it("falls back to a generated id when the id attribute's quote is never closed", () => {
+    const html = '<h3 id="unterminated>Heading</h3><p>Body</p>';
+    expect(extractSectionSubitems(html, "sec")).toEqual([
+      { id: "sec-1", title: "Heading", html: "<p>Body</p>" },
+    ]);
+  });
+
+  it("falls back to the body-derived title when the heading tag never gets its own closing >", () => {
+    const html = '<h3 id="broken</h3>afterward';
+    expect(extractSectionSubitems(html, "sec")).toEqual([
+      { id: "sec-1", title: "afterward", html: "afterward" },
+    ]);
+  });
+
+  it.each(["\n", "\r", "\t"])(
+    "treats %j before the id attribute as a valid boundary",
+    (whitespace) => {
+      const html = `<h3${whitespace}id="ws-id">Heading</h3><p>Body</p>`;
+      expect(extractSectionSubitems(html, "sec")).toEqual([
+        { id: "ws-id", title: "Heading", html: "<p>Body</p>" },
+      ]);
+    },
+  );
 });
