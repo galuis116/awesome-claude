@@ -12,7 +12,7 @@
         templates, and statuslines.
       </p>
       <p>
-        <strong>1381+ file-backed entries</strong> stay useful as both an
+        <strong>1382+ file-backed entries</strong> stay useful as both an
         awesome-list catalog and a machine-readable registry for builders.
       </p>
       <p>
@@ -36,7 +36,7 @@
       <h3>Registry snapshot</h3>
       <table>
         <tr>
-          <td align="center"><strong>1381</strong><br><sub>entries</sub></td>
+          <td align="center"><strong>1382</strong><br><sub>entries</sub></td>
           <td align="center"><strong>10</strong><br><sub>sections</sub></td>
           <td align="center"><strong>AI-reviewed</strong><br><sub>merge gate</sub></td>
         </tr>
@@ -84,7 +84,7 @@ Refreshed weekly by [`.github/workflows/gittensor-impact.yml`](.github/workflows
         </td>
 <td align="center" width="20%">
           <a href="#tools"><strong>🧰 Tools</strong></a><br>
-          <code>202</code><br>
+          <code>203</code><br>
           <sub>Apps, developer tools, services, and products for Claude-native builders.</sub>
         </td>
 <td align="center" width="20%">
@@ -793,7 +793,7 @@ packages use checksums and package trust metadata after review.
 
 Get a free API key on https://app.zyntra.app/
 
-## 🧰 Tools (202)
+## 🧰 Tools (203)
 
 - **[Activepieces](https://heyclau.de/entry/tools/activepieces)** - Open-source, self-hostable workflow automation platform with AI workflows, TypeScript pieces, human-in-the-loop steps, and a built-in MCP server.
 - **[AG2 Agent Framework](https://heyclau.de/entry/tools/ag2-agent-framework)** - Open-source Python AgentOS and multi-agent framework, evolved from AutoGen, for building conversable agents, group chats, swarms, human-in-the-loop workflows, tool use, RAG, code execution, and provider-backed agent systems.
@@ -813,6 +813,7 @@ Get a free API key on https://app.zyntra.app/
 - **[ast-grep](https://heyclau.de/entry/tools/ast-grep)** - Open-source CLI for structural code search, linting, and rewriting with abstract syntax tree patterns.
 - **[Atomic Agents](https://heyclau.de/entry/tools/atomic-agents)** - Lightweight, modular open-source Python framework for building agentic AI pipelines from atomic, composable components (agents, tools, context providers), built on Instructor and Pydantic.
 - **[Authsome](https://heyclau.de/entry/tools/authsome)** - Local credential broker for AI agents. Log in once via OAuth2 or API key, encrypted local vault stores credentials, and a local proxy injects them at request time so agents never see raw secret values.
+- **[Axolotl](https://heyclau.de/entry/tools/axolotl)** - Free open-source, config-driven LLM fine-tuning framework covering full and parameter-efficient fine-tuning (LoRA, QLoRA), preference tuning (DPO, KTO, ORPO), and reinforcement learning across many model families through declarative YAML configs.
 - **[BAML](https://heyclau.de/entry/tools/baml)** - Open-source domain-specific language from BoundaryML for writing typed LLM functions with structured inputs and outputs, a VSCode playground, and generated clients you can call from Python, TypeScript, Go, and more.
 - **[BentoML](https://heyclau.de/entry/tools/bentoml)** - Apache-2.0 Python framework for building, packaging, serving, containerizing, and deploying AI model inference APIs and multi-model serving systems.
 - **[Bolt](https://heyclau.de/entry/tools/bolt-new)** - Browser-based AI app builder for creating, editing, running, and deploying web projects from prompts.
