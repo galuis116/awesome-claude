@@ -142,6 +142,11 @@ describe("jobs-lib mapJobListingRow", () => {
   });
 
   it("derives featured and sponsored flags from tier", () => {
+    expect(mapJobListingRow(row({ tier: "free" }))).toMatchObject({
+      tier: "free",
+      featured: false,
+      sponsored: false,
+    });
     expect(mapJobListingRow(row({ tier: "featured" }))).toMatchObject({
       tier: "featured",
       featured: true,
@@ -152,6 +157,37 @@ describe("jobs-lib mapJobListingRow", () => {
       featured: true,
       sponsored: true,
     });
+  });
+
+  it("drops null list entries and returns undefined when nothing survives filtering", () => {
+    const mapped = mapJobListingRow(
+      row({
+        benefits_json: JSON.stringify([null, "  ", "Real benefit"]),
+        responsibilities_json: JSON.stringify([
+          "Build and maintain production-quality systems aligned with the role and company product surface.",
+        ]),
+      }),
+    );
+
+    expect(mapped.benefits).toEqual(["Real benefit"]);
+    expect(mapped.responsibilities).toBeUndefined();
+  });
+
+  it("falls back to an empty description when summary and description_md are both absent", () => {
+    const mapped = mapJobListingRow(
+      row({ summary: null, description_md: null }),
+    );
+
+    expect(mapped.description).toBe("");
+  });
+
+  it("defaults staleCheckCount and claimedEmployer to zero when the row omits them", () => {
+    const mapped = mapJobListingRow(
+      row({ stale_check_count: null, claimed_employer: null }),
+    );
+
+    expect(mapped.staleCheckCount).toBe(0);
+    expect(mapped.claimedEmployer).toBe(false);
   });
 });
 
@@ -178,6 +214,18 @@ describe("jobs-lib sortJobs", () => {
       "sponsored-fresh",
       "featured-fresh",
       "free-old",
+    ]);
+  });
+
+  it("preserves relative order for equal-score jobs with no postedAt to break the tie", () => {
+    const jobs = [
+      job({ slug: "standard-a", tier: "standard" }),
+      job({ slug: "standard-b", tier: "standard" }),
+    ];
+
+    expect(sortJobs(jobs).map((item) => item.slug)).toEqual([
+      "standard-a",
+      "standard-b",
     ]);
   });
 });
@@ -260,6 +308,12 @@ describe("jobs-lib toPublicJobListing", () => {
       job({ sourceKind: "employer_careers" }),
     );
     expect(publicJob.applySourceLabel).toBe("External apply via employer site");
+  });
+
+  it("labels a featured (non-sponsored) job as Featured", () => {
+    const publicJob = toPublicJobListing(job({ featured: true }));
+    expect(publicJob.labels).toContain("Featured");
+    expect(publicJob.labels).not.toContain("Sponsored");
   });
 });
 
