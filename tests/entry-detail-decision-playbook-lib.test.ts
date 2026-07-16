@@ -120,6 +120,52 @@ describe("entry detail decision playbook lib", () => {
     ]);
   });
 
+  it("marks positive detail text when reviewed, install payload, and package signals are present", () => {
+    const richEntry = entry({
+      reviewed: true,
+      installCommand: "npm install fixture",
+      packageVerified: true,
+      downloadSha256: "abc123",
+    });
+    expect(entryDecisionTrustScore(richEntry)).toBeGreaterThan(
+      entryDecisionTrustScore(entry()),
+    );
+
+    const state = entryDetailDecisionPlaybookState(richEntry, []);
+    const source = state.sections.find((section) => section.id === "source");
+    const reviewed = source?.items.find((item) => item.id === "reviewed");
+    expect(reviewed).toMatchObject({
+      done: true,
+      detail: "Registry metadata indicates a reviewed listing.",
+    });
+
+    const pkg = state.sections.find((section) => section.id === "package");
+    expect(pkg?.items.find((item) => item.id === "installable")).toMatchObject({
+      done: true,
+      detail: "Install or copy payload is available for review.",
+    });
+    expect(
+      pkg?.items.find((item) => item.id === "package-verified"),
+    ).toMatchObject({ done: true, detail: "Package marked verified." });
+    expect(pkg?.items.find((item) => item.id === "sha256")).toMatchObject({
+      detail: "SHA-256 hash is present.",
+    });
+  });
+
+  it("distinguishes an explicit packageVerified: false from an absent flag", () => {
+    const state = entryDetailDecisionPlaybookState(
+      entry({ packageVerified: false }),
+      [],
+    );
+    const pkg = state.sections.find((section) => section.id === "package");
+    expect(
+      pkg?.items.find((item) => item.id === "package-verified"),
+    ).toMatchObject({
+      done: false,
+      detail: "Package explicitly marked unverified.",
+    });
+  });
+
   it("marks source checklist critical when source link and provenance are missing", () => {
     const state = entryDetailDecisionPlaybookState(
       entry({ source: "unverified" }),
@@ -225,6 +271,18 @@ describe("entry detail decision playbook lib", () => {
       label: "Add to compare",
       primary: true,
     });
+  });
+
+  it("marks the remove-from-compare toggle primary when already in a single-entry tray", () => {
+    const current = entry();
+    const actions = entryDetailDecisionPlaybookActions(
+      entryDecisionCompareContext(current, [current]),
+      "tools/fixture",
+      false,
+    );
+    expect(
+      actions.find((action) => action.id === "compare-toggle"),
+    ).toMatchObject({ primary: true });
   });
 
   it("blocks add-to-compare when the tray is full", () => {
