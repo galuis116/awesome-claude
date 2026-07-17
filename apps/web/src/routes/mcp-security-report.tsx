@@ -11,7 +11,13 @@ import { PageContainer } from "@/components/page-container";
 import { PageHeader } from "@/components/page-header";
 import { NewsletterInline } from "@/components/newsletter-inline";
 import { DataSection, DataStat, DistTable, pctOf, type DistRow } from "@/components/data-report";
-import { withCategoryBrowseDrilldown } from "@/lib/data-report-drilldown-lib";
+import {
+  withCategoryBrowseDrilldown,
+  withDocsCoverageDrilldown,
+  withHostingDrilldown,
+  withNotesSignalDrilldown,
+  withSupplyChainSignalDrilldown,
+} from "@/lib/data-report-drilldown-lib";
 import { trackEvent } from "@/lib/analytics";
 import {
   mcpSecurityReportCategoryBrowseAnalyticsData,
@@ -61,19 +67,17 @@ const MCP = ENTRIES.filter((e) => e.category === "mcp");
 const TOTAL = MCP.length;
 
 const NOTES = notesCoverage(MCP);
-const NOTES_DIST: DistRow[] = withCategoryBrowseDrilldown(
+const NOTES_DIST: DistRow[] = withNotesSignalDrilldown(
   [
     {
       label: "Safety notes",
       count: NOTES.safety,
       pct: pctOf(NOTES.safety, TOTAL),
-      rowKey: "safety-notes",
     },
     {
       label: "Privacy notes",
       count: NOTES.privacy,
       pct: pctOf(NOTES.privacy, TOTAL),
-      rowKey: "privacy-notes",
     },
     { label: "Both", count: NOTES.both, pct: pctOf(NOTES.both, TOTAL), rowKey: "both" },
   ],
@@ -92,35 +96,27 @@ const AUTH_DIST: DistRow[] = withCategoryBrowseDrilldown(
 );
 
 const HOSTING = hostingDistribution(MCP);
-const HOSTING_DIST: DistRow[] = withCategoryBrowseDrilldown(
+const HOSTING_DIST: DistRow[] = withHostingDrilldown(
   HOSTING.rows.map((r) => ({
     label: r.label,
     count: r.count,
     pct: pctOf(r.count, HOSTING.total),
-    rowKey:
-      r.label === "Local (stdio)"
-        ? "local"
-        : r.label === "Remote (hosted)"
-          ? "remote"
-          : "unspecified",
   })),
   "mcp",
 );
 
 const SUPPLY = supplyChainCoverage(MCP);
-const SUPPLY_DIST: DistRow[] = withCategoryBrowseDrilldown(
+const SUPPLY_DIST: DistRow[] = withSupplyChainSignalDrilldown(
   [
     {
       label: "Verified package",
       count: SUPPLY.packageVerified,
       pct: pctOf(SUPPLY.packageVerified, TOTAL),
-      rowKey: "verified-package",
     },
     {
       label: "Checksummed download",
       count: SUPPLY.checksummedDownload,
       pct: pctOf(SUPPLY.checksummedDownload, TOTAL),
-      rowKey: "checksummed-download",
     },
   ],
   "mcp",
@@ -129,7 +125,7 @@ const SUPPLY_DIST: DistRow[] = withCategoryBrowseDrilldown(
 // Documentation & disclosure coverage — how well servers are documented for safe rollout.
 const WITH_PREREQS = MCP.filter((e) => (e.prerequisites?.length ?? 0) > 0).length;
 const WITH_TROUBLESHOOTING = MCP.filter((e) => e.hasTroubleshooting).length;
-const DOCS_DIST: DistRow[] = withCategoryBrowseDrilldown(
+const DOCS_DIST: DistRow[] = withDocsCoverageDrilldown(
   [
     {
       label: "Prerequisites listed",
@@ -141,13 +137,11 @@ const DOCS_DIST: DistRow[] = withCategoryBrowseDrilldown(
       label: "Safety notes",
       count: NOTES.safety,
       pct: pctOf(NOTES.safety, TOTAL),
-      rowKey: "safety-notes",
     },
     {
       label: "Privacy notes",
       count: NOTES.privacy,
       pct: pctOf(NOTES.privacy, TOTAL),
-      rowKey: "privacy-notes",
     },
     {
       label: "Troubleshooting",
