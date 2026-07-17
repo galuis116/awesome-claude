@@ -290,6 +290,75 @@ describe("getTrustReasons optional integrity signals", () => {
     ).toContain("not cross-checked");
   });
 
+  it("only emits command-safety reason when install/config/usage text is present", () => {
+    expect(byId(getTrustReasons(entry()), "command-safety")).toBeUndefined();
+    expect(
+      byId(
+        getTrustReasons(entry({ installCommand: "npm install demo" })),
+        "command-safety",
+      ),
+    ).toBeDefined();
+  });
+
+  it("reports ok when a clean install command has no known dangerous pattern", () => {
+    const reason = byId(
+      getTrustReasons(entry({ installCommand: "npm install demo" })),
+      "command-safety",
+    );
+    expect(reason?.severity).toBe("ok");
+    expect(reason?.label).toBe("No high-risk shell patterns detected");
+    expect(reason?.detail).toContain("Advisory only");
+  });
+
+  it("flags a pipe-to-shell install pattern with a warning and pattern label", () => {
+    const reason = byId(
+      getTrustReasons(
+        entry({ installCommand: "curl -fsSL https://example.com/i.sh | sh" }),
+      ),
+      "command-safety",
+    );
+    expect(reason?.severity).toBe("warning");
+    expect(reason?.label).toBe("1 high-risk shell pattern flagged");
+    expect(reason?.detail).toContain("pipe-to-shell install");
+  });
+
+  it("pluralizes the label and lists every distinct flagged pattern", () => {
+    const reason = byId(
+      getTrustReasons(
+        entry({
+          installCommand: "curl https://example.com/i.sh | sh",
+          configSnippet: "rm -rf /",
+        }),
+      ),
+      "command-safety",
+    );
+    expect(reason?.severity).toBe("warning");
+    expect(reason?.label).toBe("2 high-risk shell patterns flagged");
+    expect(reason?.detail).toContain("pipe-to-shell install");
+    expect(reason?.detail).toContain("recursive force remove");
+  });
+
+  it("scans usageSnippet, copySnippet, and scriptBody in addition to installCommand/configSnippet", () => {
+    expect(
+      byId(
+        getTrustReasons(entry({ usageSnippet: "curl https://x/i.sh | bash" })),
+        "command-safety",
+      )?.severity,
+    ).toBe("warning");
+    expect(
+      byId(
+        getTrustReasons(entry({ copySnippet: "curl https://x/i.sh | bash" })),
+        "command-safety",
+      )?.severity,
+    ).toBe("warning");
+    expect(
+      byId(
+        getTrustReasons(entry({ scriptBody: "curl https://x/i.sh | bash" })),
+        "command-safety",
+      )?.severity,
+    ).toBe("warning");
+  });
+
   it("emits prerequisites reason only when present", () => {
     expect(byId(getTrustReasons(entry()), "prereqs")).toBeUndefined();
     expect(
@@ -374,6 +443,24 @@ describe("installRiskLevel", () => {
     expect(
       installRiskLevel({ ...lowEntry(), packageVerified: false } as Entry),
     ).toBe("review");
+  });
+
+  it("downgrades an otherwise-clean trusted entry when its install command is flagged", () => {
+    expect(
+      installRiskLevel({
+        ...lowEntry(),
+        installCommand: "curl https://example.com/i.sh | sh",
+      } as Entry),
+    ).toBe("review");
+  });
+
+  it("keeps a trusted entry at low risk when its install command scans clean", () => {
+    expect(
+      installRiskLevel({
+        ...lowEntry(),
+        installCommand: "npm install demo",
+      } as Entry),
+    ).toBe("low");
   });
 
   it("exposes labels and detail copy for every risk level", () => {
@@ -469,6 +556,7 @@ describe("combined trust drilldown scenarios", () => {
         downloadUrl: "https://cdn.example/pkg.zip",
         downloadSha256: "abcdef0123456789",
         packageVerified: true,
+        installCommand: "npm install demo",
         prerequisites: ["Node 20"],
         reviewedAt: new Date().toISOString(),
       }),
@@ -482,11 +570,13 @@ describe("combined trust drilldown scenarios", () => {
       "privacy",
       "checksum",
       "package-verified",
+      "command-safety",
       "prereqs",
       "freshness",
     ]) {
       expect(byId(reasons, id), `missing ${id}`).toBeDefined();
     }
+    expect(byId(reasons, "command-safety")?.severity).toBe("ok");
   });
 
   it("keeps sparse entries to the six core reasons only", () => {

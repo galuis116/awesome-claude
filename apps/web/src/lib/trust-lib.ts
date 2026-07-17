@@ -9,6 +9,8 @@
  * existing imports stay unchanged.
  */
 
+import { scanDangerousShellPatterns } from "@heyclaude/registry/command-safety";
+
 import type { Entry } from "@/types/registry";
 
 export type TrustSeverity = "ok" | "info" | "warning" | "blocker";
@@ -158,6 +160,31 @@ export function getTrustReasons(entry: Entry): TrustReason[] {
         ? "Published package matches the source repository."
         : "Published package was not cross-checked against the source repo.",
       docHref: "/quality#integrity",
+    });
+  }
+
+  // Command safety scan
+  const commandText = [
+    entry.installCommand,
+    entry.configSnippet,
+    entry.usageSnippet,
+    entry.copySnippet,
+    entry.scriptBody,
+  ]
+    .filter(Boolean)
+    .join("\n");
+  if (commandText) {
+    const matches = scanDangerousShellPatterns(commandText);
+    reasons.push({
+      id: "command-safety",
+      severity: matches.length ? "warning" : "ok",
+      label: matches.length
+        ? `${matches.length} high-risk shell pattern${matches.length === 1 ? "" : "s"} flagged`
+        : "No high-risk shell patterns detected",
+      detail: matches.length
+        ? `Automated scan of install/config text flagged: ${matches.join(", ")}. Review before running.`
+        : "Automated scan of install/config text found no known destructive or remote-exec patterns. Advisory only — not a sandbox or a safety guarantee.",
+      docHref: "/quality#safety-notes",
     });
   }
 
