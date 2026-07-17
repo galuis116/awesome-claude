@@ -2,17 +2,26 @@ import { describe, expect, it } from "vitest";
 import {
   browseDrilldown,
   categoryDrilldown,
+  hostingKeyFromLabel,
+  installMethodKeyFromLabel,
   notesSignalFromLabel,
   platformFromLabel,
   sourceStatusFromLabel,
+  supplyChainSignalFromLabel,
   tagDrilldown,
+  transportKeyFromLabel,
   trustLevelFromLabel,
   withCategoryHubDrilldown,
+  withDocsCoverageDrilldown,
+  withHostingDrilldown,
+  withInstallMethodDrilldown,
   withNotesSignalDrilldown,
   withPlatformDrilldown,
   withReportDimensionDrilldown,
   withSourceDrilldown,
+  withSupplyChainSignalDrilldown,
   withTagDrilldown,
+  withTransportDrilldown,
   withTrustDrilldown,
 } from "@/lib/data-report-drilldown-lib";
 
@@ -101,6 +110,20 @@ describe("data report drilldown lib", () => {
       },
     ]);
     expect(
+      withSourceDrilldown([{ label: "First-party", count: 3, pct: 30 }]),
+    ).toEqual([
+      {
+        label: "First-party",
+        count: 3,
+        pct: 30,
+        rowKey: "first-party",
+        drilldown: {
+          kind: "browse",
+          search: { source: "first-party" },
+        },
+      },
+    ]);
+    expect(
       withSourceDrilldown([{ label: "Unknown", count: 1, pct: 10 }]),
     ).toEqual([{ label: "Unknown", count: 1, pct: 10 }]);
 
@@ -153,6 +176,48 @@ describe("data report drilldown lib", () => {
     expect(
       withNotesSignalDrilldown([{ label: "Both", count: 1, pct: 10 }]),
     ).toEqual([{ label: "Both", count: 1, pct: 10 }]);
+    expect(
+      withNotesSignalDrilldown(
+        [{ label: "Both", count: 1, pct: 10, rowKey: "both" }],
+        "mcp",
+      ),
+    ).toEqual([
+      {
+        label: "Both",
+        count: 1,
+        pct: 10,
+        rowKey: "both",
+        drilldown: { kind: "browse", search: { category: "mcp" } },
+      },
+    ]);
+    expect(
+      withNotesSignalDrilldown([{ label: "Both", count: 1, pct: 10 }], "mcp"),
+    ).toEqual([
+      {
+        label: "Both",
+        count: 1,
+        pct: 10,
+        rowKey: "Both",
+        drilldown: { kind: "browse", search: { category: "mcp" } },
+      },
+    ]);
+    expect(
+      withNotesSignalDrilldown(
+        [{ label: "Safety notes", count: 3, pct: 30 }],
+        "mcp",
+      ),
+    ).toEqual([
+      {
+        label: "Safety notes",
+        count: 3,
+        pct: 30,
+        rowKey: "safety-notes",
+        drilldown: {
+          kind: "browse",
+          search: { category: "mcp", signal: "safety-notes" },
+        },
+      },
+    ]);
 
     expect(
       withTagDrilldown([{ label: "postgres", count: 3, pct: 30 }]),
@@ -188,6 +253,155 @@ describe("data report drilldown lib", () => {
     ).toEqual([{ label: "Unknown", count: 1, pct: 10 }]);
   });
 
+  it("maps MCP transport, hosting, supply-chain, and install labels", () => {
+    expect(transportKeyFromLabel("stdio (local)")).toBe("stdio");
+    expect(transportKeyFromLabel("HTTP")).toBe("http");
+    expect(transportKeyFromLabel("SSE")).toBe("sse");
+    expect(transportKeyFromLabel("Unspecified")).toBe("unspecified");
+    expect(transportKeyFromLabel("Unknown")).toBeUndefined();
+    expect(hostingKeyFromLabel("Local (stdio)")).toBe("local");
+    expect(hostingKeyFromLabel("Remote (hosted)")).toBe("remote");
+    expect(hostingKeyFromLabel("Unspecified")).toBe("unspecified");
+    expect(hostingKeyFromLabel("Unknown")).toBeUndefined();
+    expect(supplyChainSignalFromLabel("Verified package")).toBe(
+      "trusted-package",
+    );
+    expect(supplyChainSignalFromLabel("Checksummed download")).toBe(
+      "checksums",
+    );
+    expect(supplyChainSignalFromLabel("Unknown")).toBeUndefined();
+    expect(installMethodKeyFromLabel("npm / npx")).toBe("npm-npx");
+    expect(installMethodKeyFromLabel("Python (pip / uv)")).toBe(
+      "python-pip-uv",
+    );
+
+    expect(
+      withTransportDrilldown([{ label: "HTTP", count: 4, pct: 40 }], "mcp"),
+    ).toEqual([
+      {
+        label: "HTTP",
+        count: 4,
+        pct: 40,
+        rowKey: "http",
+        drilldown: { kind: "browse", search: { category: "mcp" } },
+      },
+    ]);
+    expect(
+      withTransportDrilldown([{ label: "Unknown", count: 1, pct: 10 }], "mcp"),
+    ).toEqual([{ label: "Unknown", count: 1, pct: 10 }]);
+
+    expect(
+      withHostingDrilldown(
+        [{ label: "Local (stdio)", count: 5, pct: 50 }],
+        "mcp",
+      ),
+    ).toEqual([
+      {
+        label: "Local (stdio)",
+        count: 5,
+        pct: 50,
+        rowKey: "local",
+        drilldown: { kind: "browse", search: { category: "mcp" } },
+      },
+    ]);
+    expect(
+      withHostingDrilldown([{ label: "Unknown", count: 1, pct: 10 }], "mcp"),
+    ).toEqual([{ label: "Unknown", count: 1, pct: 10 }]);
+
+    expect(
+      withSupplyChainSignalDrilldown(
+        [{ label: "Verified package", count: 2, pct: 20 }],
+        "mcp",
+      ),
+    ).toEqual([
+      {
+        label: "Verified package",
+        count: 2,
+        pct: 20,
+        rowKey: "trusted-package",
+        drilldown: {
+          kind: "browse",
+          search: { category: "mcp", signal: "trusted-package" },
+        },
+      },
+    ]);
+    expect(
+      withSupplyChainSignalDrilldown([
+        { label: "Checksummed download", count: 1, pct: 10 },
+      ]),
+    ).toEqual([
+      {
+        label: "Checksummed download",
+        count: 1,
+        pct: 10,
+        rowKey: "checksums",
+        drilldown: { kind: "browse", search: { signal: "checksums" } },
+      },
+    ]);
+    expect(
+      withSupplyChainSignalDrilldown(
+        [{ label: "Unknown", count: 1, pct: 10 }],
+        "mcp",
+      ),
+    ).toEqual([{ label: "Unknown", count: 1, pct: 10 }]);
+
+    expect(
+      withInstallMethodDrilldown(
+        [{ label: "npm / npx", count: 3, pct: 30 }],
+        "mcp",
+      ),
+    ).toEqual([
+      {
+        label: "npm / npx",
+        count: 3,
+        pct: 30,
+        rowKey: "npm-npx",
+        drilldown: { kind: "browse", search: { category: "mcp" } },
+      },
+    ]);
+
+    expect(
+      withDocsCoverageDrilldown(
+        [
+          { label: "Safety notes", count: 2, pct: 20 },
+          {
+            label: "Prerequisites listed",
+            count: 3,
+            pct: 30,
+            rowKey: "prerequisites",
+          },
+          { label: "Troubleshooting", count: 1, pct: 10 },
+        ],
+        "mcp",
+      ),
+    ).toEqual([
+      {
+        label: "Safety notes",
+        count: 2,
+        pct: 20,
+        rowKey: "safety-notes",
+        drilldown: {
+          kind: "browse",
+          search: { category: "mcp", signal: "safety-notes" },
+        },
+      },
+      {
+        label: "Prerequisites listed",
+        count: 3,
+        pct: 30,
+        rowKey: "prerequisites",
+        drilldown: { kind: "browse", search: { category: "mcp" } },
+      },
+      {
+        label: "Troubleshooting",
+        count: 1,
+        pct: 10,
+        rowKey: "troubleshooting",
+        drilldown: { kind: "browse", search: { category: "mcp" } },
+      },
+    ]);
+  });
+
   it("attaches dimension drilldowns for known report keys", () => {
     expect(
       withReportDimensionDrilldown(
@@ -217,6 +431,41 @@ describe("data report drilldown lib", () => {
         "agents",
       )[0]?.rowKey,
     ).toBe("safety-notes");
+    expect(
+      withReportDimensionDrilldown(
+        "supply-chain",
+        [{ label: "Verified package", count: 1, pct: 100 }],
+        "mcp",
+      )[0]?.rowKey,
+    ).toBe("trusted-package");
+    expect(
+      withReportDimensionDrilldown(
+        "docs-coverage",
+        [{ label: "Privacy notes", count: 1, pct: 100 }],
+        "mcp",
+      )[0]?.rowKey,
+    ).toBe("privacy-notes");
+    expect(
+      withReportDimensionDrilldown(
+        "transport",
+        [{ label: "SSE", count: 1, pct: 100 }],
+        "mcp",
+      )[0]?.rowKey,
+    ).toBe("sse");
+    expect(
+      withReportDimensionDrilldown(
+        "hosting",
+        [{ label: "Remote (hosted)", count: 1, pct: 100 }],
+        "mcp",
+      )[0]?.rowKey,
+    ).toBe("remote");
+    expect(
+      withReportDimensionDrilldown(
+        "install-methods",
+        [{ label: "pnpm", count: 1, pct: 100 }],
+        "mcp",
+      )[0]?.rowKey,
+    ).toBe("pnpm");
     expect(
       withReportDimensionDrilldown(
         "use-cases",

@@ -35,6 +35,24 @@ const NOTES_SIGNAL_BY_LABEL: Record<string, string> = {
   "Privacy notes": "privacy-notes",
 };
 
+const SUPPLY_SIGNAL_BY_LABEL: Record<string, string> = {
+  "Verified package": "trusted-package",
+  "Checksummed download": "checksums",
+};
+
+const TRANSPORT_KEY_BY_LABEL: Record<string, string> = {
+  "stdio (local)": "stdio",
+  HTTP: "http",
+  SSE: "sse",
+  Unspecified: "unspecified",
+};
+
+const HOSTING_KEY_BY_LABEL: Record<string, string> = {
+  "Local (stdio)": "local",
+  "Remote (hosted)": "remote",
+  Unspecified: "unspecified",
+};
+
 export function trustLevelFromLabel(label: string): TrustLevel | undefined {
   return TRUST_BY_LABEL[label];
 }
@@ -49,6 +67,25 @@ export function platformFromLabel(label: string): Platform | undefined {
 
 export function notesSignalFromLabel(label: string): string | undefined {
   return NOTES_SIGNAL_BY_LABEL[label];
+}
+
+export function supplyChainSignalFromLabel(label: string): string | undefined {
+  return SUPPLY_SIGNAL_BY_LABEL[label];
+}
+
+export function transportKeyFromLabel(label: string): string | undefined {
+  return TRANSPORT_KEY_BY_LABEL[label];
+}
+
+export function hostingKeyFromLabel(label: string): string | undefined {
+  return HOSTING_KEY_BY_LABEL[label];
+}
+
+export function installMethodKeyFromLabel(label: string): string {
+  return label
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 export function browseDrilldown(search: DistBrowseSearch): DistRowDrilldown {
@@ -105,16 +142,91 @@ export function withPlatformDrilldown(rows: DistRow[]): DistRow[] {
   });
 }
 
-export function withNotesSignalDrilldown(rows: DistRow[]): DistRow[] {
+export function withNotesSignalDrilldown(rows: DistRow[], category?: string): DistRow[] {
   return rows.map((row) => {
     const signal = notesSignalFromLabel(row.label);
+    if (!signal) {
+      if (!category) return row;
+      return {
+        ...row,
+        rowKey: row.rowKey ?? row.label,
+        drilldown: browseDrilldown({ category }),
+      };
+    }
+    return {
+      ...row,
+      rowKey: signal,
+      drilldown: browseDrilldown({
+        ...(category ? { category } : {}),
+        signal,
+      }),
+    };
+  });
+}
+
+export function withSupplyChainSignalDrilldown(rows: DistRow[], category?: string): DistRow[] {
+  return rows.map((row) => {
+    const signal = supplyChainSignalFromLabel(row.label);
     if (!signal) return row;
     return {
       ...row,
       rowKey: signal,
-      drilldown: browseDrilldown({ signal }),
+      drilldown: browseDrilldown({
+        ...(category ? { category } : {}),
+        signal,
+      }),
     };
   });
+}
+
+export function withDocsCoverageDrilldown(rows: DistRow[], category: string): DistRow[] {
+  return rows.map((row) => {
+    const signal = notesSignalFromLabel(row.label);
+    if (signal) {
+      return {
+        ...row,
+        rowKey: signal,
+        drilldown: browseDrilldown({ category, signal }),
+      };
+    }
+    return {
+      ...row,
+      rowKey: row.rowKey ?? installMethodKeyFromLabel(row.label),
+      drilldown: browseDrilldown({ category }),
+    };
+  });
+}
+
+export function withTransportDrilldown(rows: DistRow[], category: string): DistRow[] {
+  return rows.map((row) => {
+    const key = transportKeyFromLabel(row.label);
+    if (!key) return row;
+    return {
+      ...row,
+      rowKey: key,
+      drilldown: browseDrilldown({ category }),
+    };
+  });
+}
+
+export function withHostingDrilldown(rows: DistRow[], category: string): DistRow[] {
+  return rows.map((row) => {
+    const key = hostingKeyFromLabel(row.label);
+    if (!key) return row;
+    return {
+      ...row,
+      rowKey: key,
+      drilldown: browseDrilldown({ category }),
+    };
+  });
+}
+
+export function withInstallMethodDrilldown(rows: DistRow[], category: string): DistRow[] {
+  return rows.map((row) => ({
+    ...row,
+    rowKey: installMethodKeyFromLabel(row.label),
+    drilldown: browseDrilldown({ category }),
+  }));
 }
 
 export function withTagDrilldown(rows: DistRow[]): DistRow[] {
@@ -165,7 +277,17 @@ export function withReportDimensionDrilldown(
     case "platform-coverage":
       return withPlatformDrilldown(rows);
     case "notes-coverage":
-      return withNotesSignalDrilldown(rows);
+      return withNotesSignalDrilldown(rows, category);
+    case "supply-chain":
+      return withSupplyChainSignalDrilldown(rows, category);
+    case "docs-coverage":
+      return withDocsCoverageDrilldown(rows, category);
+    case "transport":
+      return withTransportDrilldown(rows, category);
+    case "hosting":
+      return withHostingDrilldown(rows, category);
+    case "install-methods":
+      return withInstallMethodDrilldown(rows, category);
     case "use-cases":
       return withTagDrilldown(rows);
     case "prerequisites":

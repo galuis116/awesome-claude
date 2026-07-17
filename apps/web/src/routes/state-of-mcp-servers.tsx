@@ -22,6 +22,9 @@ import {
   withSourceDrilldown,
   withTagDrilldown,
   withTrustDrilldown,
+  withTransportDrilldown,
+  withHostingDrilldown,
+  withInstallMethodDrilldown,
 } from "@/lib/data-report-drilldown-lib";
 import { trackEvent } from "@/lib/analytics";
 import {
@@ -83,18 +86,24 @@ const MCP = ENTRIES.filter((e) => e.category === "mcp");
 const TOTAL = MCP.length;
 
 const TRANSPORT = transportDistribution(MCP);
-const TRANSPORT_DIST: DistRow[] = TRANSPORT.rows.map((r) => ({
-  label: r.label,
-  count: r.count,
-  pct: pctOf(r.count, TRANSPORT.total),
-}));
+const TRANSPORT_DIST: DistRow[] = withTransportDrilldown(
+  TRANSPORT.rows.map((r) => ({
+    label: r.label,
+    count: r.count,
+    pct: pctOf(r.count, TRANSPORT.total),
+  })),
+  "mcp",
+);
 
 const HOSTING = hostingDistribution(MCP);
-const HOSTING_DIST: DistRow[] = HOSTING.rows.map((r) => ({
-  label: r.label,
-  count: r.count,
-  pct: pctOf(r.count, HOSTING.total),
-}));
+const HOSTING_DIST: DistRow[] = withHostingDrilldown(
+  HOSTING.rows.map((r) => ({
+    label: r.label,
+    count: r.count,
+    pct: pctOf(r.count, HOSTING.total),
+  })),
+  "mcp",
+);
 const REMOTE = MCP.filter((e) => hostingOf(classifyTransport(e)) === "Remote (hosted)").length;
 const LOCAL = MCP.filter((e) => hostingOf(classifyTransport(e)) === "Local (stdio)").length;
 
@@ -120,11 +129,14 @@ const SOURCE_DIST: DistRow[] = withSourceDrilldown(
 );
 
 const INSTALL = installMethodDistribution(MCP);
-const INSTALL_DIST: DistRow[] = INSTALL.rows.map((r) => ({
-  label: r.label,
-  count: r.count,
-  pct: pctOf(r.count, INSTALL.total),
-}));
+const INSTALL_DIST: DistRow[] = withInstallMethodDrilldown(
+  INSTALL.rows.map((r) => ({
+    label: r.label,
+    count: r.count,
+    pct: pctOf(r.count, INSTALL.total),
+  })),
+  "mcp",
+);
 
 // Most common integration tags — what these servers actually connect Claude to.
 const GENERIC_TAGS = new Set(["mcp", "mcp-server", "mcp-servers", "claude", "ai", "integration"]);
@@ -279,14 +291,24 @@ function StateOfMcpServersPage() {
         title="Transport distribution"
         help="How MCP servers connect to Claude. Local servers speak stdio; hosted servers expose an HTTP (streamable) or SSE endpoint. Classified from each entry's declared config and install command."
       >
-        <DistTable rows={TRANSPORT_DIST} />
+        <DistTable
+          rows={TRANSPORT_DIST}
+          onRowClick={(row, rowIndex) =>
+            trackDistRow("transport", row, rowIndex, TRANSPORT_DIST.length)
+          }
+        />
       </DataSection>
 
       <DataSection
         title="Local vs hosted"
         help="Whether a server runs as a local process you launch (stdio) or a remote endpoint you connect to (HTTP/SSE)."
       >
-        <DistTable rows={HOSTING_DIST} />
+        <DistTable
+          rows={HOSTING_DIST}
+          onRowClick={(row, rowIndex) =>
+            trackDistRow("hosting", row, rowIndex, HOSTING_DIST.length)
+          }
+        />
       </DataSection>
 
       <div className="mt-12 grid gap-6 lg:grid-cols-2">
@@ -332,7 +354,12 @@ function StateOfMcpServersPage() {
         title="Install methods"
         help={`How the ${INSTALL.total} MCP servers with an install command are delivered. Servers configured purely by editing a config file (no install command) are excluded here.`}
       >
-        <DistTable rows={INSTALL_DIST} />
+        <DistTable
+          rows={INSTALL_DIST}
+          onRowClick={(row, rowIndex) =>
+            trackDistRow("install-methods", row, rowIndex, INSTALL_DIST.length)
+          }
+        />
       </DataSection>
 
       <DataSection
