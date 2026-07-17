@@ -12,7 +12,7 @@
         templates, and statuslines.
       </p>
       <p>
-        <strong>1383+ file-backed entries</strong> stay useful as both an
+        <strong>1384+ file-backed entries</strong> stay useful as both an
         awesome-list catalog and a machine-readable registry for builders.
       </p>
       <p>
@@ -36,7 +36,7 @@
       <h3>Registry snapshot</h3>
       <table>
         <tr>
-          <td align="center"><strong>1383</strong><br><sub>entries</sub></td>
+          <td align="center"><strong>1384</strong><br><sub>entries</sub></td>
           <td align="center"><strong>10</strong><br><sub>sections</sub></td>
           <td align="center"><strong>AI-reviewed</strong><br><sub>merge gate</sub></td>
         </tr>
@@ -84,7 +84,7 @@ Refreshed weekly by [`.github/workflows/gittensor-impact.yml`](.github/workflows
         </td>
 <td align="center" width="20%">
           <a href="#tools"><strong>🧰 Tools</strong></a><br>
-          <code>204</code><br>
+          <code>205</code><br>
           <sub>Apps, developer tools, services, and products for Claude-native builders.</sub>
         </td>
 <td align="center" width="20%">
@@ -793,7 +793,7 @@ packages use checksums and package trust metadata after review.
 
 Get a free API key on https://app.zyntra.app/
 
-## 🧰 Tools (204)
+## 🧰 Tools (205)
 
 - **[Activepieces](https://heyclau.de/entry/tools/activepieces)** - Open-source, self-hostable workflow automation platform with AI workflows, TypeScript pieces, human-in-the-loop steps, and a built-in MCP server.
 - **[AG2 Agent Framework](https://heyclau.de/entry/tools/ag2-agent-framework)** - Open-source Python AgentOS and multi-agent framework, evolved from AutoGen, for building conversable agents, group chats, swarms, human-in-the-loop workflows, tool use, RAG, code execution, and provider-backed agent systems.
@@ -966,6 +966,7 @@ Get a free API key on https://app.zyntra.app/
 - **[RAGFlow](https://heyclau.de/entry/tools/ragflow)** - Open-source RAG and agentic retrieval platform with DeepDoc document understanding, visual chunking, grounded citations, heterogeneous data-source ingestion, agent workflows, MCP support, code executor support, and Docker self-hosting.
 - **[Ray](https://heyclau.de/entry/tools/ray)** - Apache-2.0 distributed AI compute engine for scaling Python, ML data processing, training, tuning, reinforcement learning, and model serving workloads.
 - **[Raycast](https://heyclau.de/entry/tools/raycast)** - macOS launcher and extension platform with AI commands, automations, team workflows, and developer-focused integrations.
+- **[Reflex](https://heyclau.de/entry/tools/reflex)** - Open-source full-stack web framework for building web apps entirely in Python, compiling a Python frontend to React and Next.js while keeping state management and event handling in Python, useful for building UIs, dashboards, and tools for AI apps and agents.
 - **[Replit Agent](https://heyclau.de/entry/tools/replit-agent)** - Browser-based AI software builder for generating, editing, deploying, and iterating on applications in Replit.
 - **[Rivet](https://heyclau.de/entry/tools/rivet)** - Open-source visual AI programming environment from Ironclad for building, debugging, and embedding complex LLM agents and prompt-chaining graphs, with a desktop app and a TypeScript library.
 - **[Roo Code](https://heyclau.de/entry/tools/roo-code)** - Open-source AI coding agent for VS Code with modes for planning, editing, debugging, and workflow automation.
