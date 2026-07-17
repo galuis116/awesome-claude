@@ -190,6 +190,35 @@ describe("skill-package-validator-lib validateSkillPackageFiles", () => {
     );
   });
 
+  it("rejects a blank package path", () => {
+    const result = validateSkillPackageFiles({
+      githubUrl: "https://github.com/JSONbored/awesome-claude",
+      files: [
+        skillFile("SKILL.md", { text: validSkillMarkdown() }),
+        skillFile("", { text: "orphan" }),
+      ],
+    });
+
+    expect(result.errors).toEqual(
+      expect.arrayContaining([expect.stringContaining("(blank)")]),
+    );
+  });
+
+  it("falls back to a default submission description with no frontmatter description or body text", () => {
+    const result = validateSkillPackageFiles({
+      githubUrl: "https://github.com/JSONbored/awesome-claude",
+      files: [
+        skillFile("SKILL.md", {
+          text: "---\nname: Terse Skill\ndescription: \n---\n\n# Terse Skill\n",
+        }),
+      ],
+    });
+
+    expect(result.submissionFields.description).toBe(
+      "Validated Agent Skill package submitted for maintainer review.",
+    );
+  });
+
   it("rejects unreadable SKILL.md text", () => {
     const result = validateSkillPackageFiles({
       githubUrl: "https://github.com/JSONbored/awesome-claude",
@@ -380,6 +409,27 @@ verification_status: shipped
       skill_level: "advanced",
       verification_status: "validated",
     });
+  });
+
+  it("uses an explicit frontmatter card_description instead of clamping the description", () => {
+    const result = validateSkillPackageFiles({
+      githubUrl: "https://github.com/JSONbored/awesome-claude",
+      files: [
+        skillFile("card/SKILL.md", {
+          text: `---
+name: Card Skill
+description: ${VALID_DESCRIPTION}
+card_description: Custom short summary for the directory card.
+---
+# Card Skill
+`,
+        }),
+      ],
+    });
+
+    expect(result.submissionFields.card_description).toBe(
+      "Custom short summary for the directory card.",
+    );
   });
 
   it("slugifies skill names with punctuation for submission fields", () => {
