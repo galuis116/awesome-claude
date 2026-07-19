@@ -1,4 +1,12 @@
 import type { Entry } from "@/types/registry";
+import {
+  hasInstallPayloadSignal as hasInstall,
+  hasPackageSignal as hasPackage,
+  hasPrivacySignal as hasPrivacy,
+  hasReviewedSignal as hasReviewed,
+  hasSafetySignal as hasSafety,
+  hasSourceSignal as hasSource,
+} from "@/lib/entry-signal-predicates-lib";
 
 export type RolloutPresetId = "prototype" | "team" | "production";
 export type RolloutChecklistTone = "complete" | "warning" | "blocked";
@@ -48,32 +56,6 @@ const PRESET_HEADING: Record<RolloutPresetId, string> = {
 
 function entryRef(entry: Entry): string {
   return `${entry.category}/${entry.slug}`;
-}
-
-function hasSafety(entry: Entry): boolean {
-  return Boolean(entry.safetyNotes || entry.safetyNotesList?.length);
-}
-
-function hasPrivacy(entry: Entry): boolean {
-  return Boolean(entry.privacyNotes || entry.privacyNotesList?.length);
-}
-
-function hasPackage(entry: Entry): boolean {
-  return entry.packageVerified === true || Boolean(entry.downloadSha256);
-}
-
-function hasInstall(entry: Entry): boolean {
-  return Boolean(
-    entry.installCommand || entry.configSnippet || entry.copySnippet || entry.fullCopy,
-  );
-}
-
-function hasSource(entry: Entry): boolean {
-  return entry.source !== "unverified" || Boolean(entry.sourceUrl);
-}
-
-function hasReviewed(entry: Entry): boolean {
-  return Boolean(entry.reviewed || entry.reviewedBy);
 }
 
 function signalMap(entry: Entry): SignalMap {

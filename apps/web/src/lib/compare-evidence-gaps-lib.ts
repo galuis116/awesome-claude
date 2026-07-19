@@ -6,6 +6,14 @@
  */
 
 import type { Entry } from "@/types/registry";
+import {
+  hasInstallPayloadSignal as hasInstallPayload,
+  hasPackageSignal as hasPackage,
+  hasPrivacySignal as hasPrivacy,
+  hasReviewedSignal as hasReviewed,
+  hasSafetySignal as hasSafety,
+  hasSourceSignal as hasSource,
+} from "@/lib/entry-signal-predicates-lib";
 
 export type CompareEvidenceGapId =
   | "source"
@@ -41,34 +49,6 @@ export type CompareEvidenceGapsState = {
   entries: CompareEntryEvidenceCell[];
   highSeverityCount: number;
 };
-
-function hasSafety(entry: Pick<Entry, "safetyNotes" | "safetyNotesList">): boolean {
-  return Boolean(entry.safetyNotes || entry.safetyNotesList?.length);
-}
-
-function hasPrivacy(entry: Pick<Entry, "privacyNotes" | "privacyNotesList">): boolean {
-  return Boolean(entry.privacyNotes || entry.privacyNotesList?.length);
-}
-
-function hasInstallPayload(
-  entry: Pick<Entry, "installCommand" | "configSnippet" | "fullCopy" | "copySnippet">,
-): boolean {
-  return Boolean(
-    entry.installCommand || entry.configSnippet || entry.fullCopy || entry.copySnippet,
-  );
-}
-
-function hasSource(entry: Pick<Entry, "source" | "sourceUrl">): boolean {
-  return entry.source !== "unverified" || Boolean(entry.sourceUrl);
-}
-
-function hasReviewed(entry: Pick<Entry, "reviewed" | "reviewedBy">): boolean {
-  return Boolean(entry.reviewed || entry.reviewedBy);
-}
-
-function hasPackage(entry: Pick<Entry, "packageVerified" | "downloadSha256">): boolean {
-  return entry.packageVerified === true || Boolean(entry.downloadSha256);
-}
 
 const GAP_LABELS: Record<CompareEvidenceGapId, string> = {
   source: "Source provenance",
