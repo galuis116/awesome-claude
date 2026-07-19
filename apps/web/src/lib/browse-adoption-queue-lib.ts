@@ -1,4 +1,5 @@
 import type { Entry } from "@/types/registry";
+import { entryRef } from "@/lib/entry-identity";
 
 export type BrowseAdoptionPresetId = "balanced" | "security-first" | "fast-pilot";
 export type BrowseAdoptionTier = "ready" | "caution" | "hold";
@@ -65,10 +66,6 @@ function hasInstall(entry: Entry): boolean {
   return Boolean(
     entry.installCommand || entry.configSnippet || entry.copySnippet || entry.fullCopy,
   );
-}
-
-function entryRef(entry: Entry): string {
-  return `${entry.category}/${entry.slug}`;
 }
 
 function headingForPreset(preset: BrowseAdoptionPresetId): string {

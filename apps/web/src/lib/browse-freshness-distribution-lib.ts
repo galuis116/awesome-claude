@@ -9,6 +9,7 @@
  */
 
 import type { Entry } from "@/types/registry";
+import { entryRef } from "@/lib/entry-identity";
 
 export type FreshnessBucketId = "fresh" | "recent" | "aging" | "stale";
 
@@ -85,10 +86,6 @@ function medianOf(values: number[]): number {
     return Math.round((sorted[mid - 1]! + sorted[mid]!) / 2);
   }
   return sorted[mid]!;
-}
-
-function entryRef(entry: Entry): string {
-  return `${entry.category}/${entry.slug}`;
 }
 
 function summarize(

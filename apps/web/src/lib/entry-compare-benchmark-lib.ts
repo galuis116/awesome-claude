@@ -1,4 +1,5 @@
 import type { Entry } from "@/types/registry";
+import { entryRef } from "@/lib/entry-identity";
 import { sameEntry } from "@/lib/entry-identity";
 
 export type CompareBenchmarkPresetId = "balanced" | "security" | "rollout";
@@ -61,10 +62,6 @@ function hasInstall(entry: Entry): boolean {
   return Boolean(
     entry.installCommand || entry.configSnippet || entry.copySnippet || entry.fullCopy,
   );
-}
-
-function entryRef(entry: Entry): string {
-  return `${entry.category}/${entry.slug}`;
 }
 
 function headingForPreset(preset: CompareBenchmarkPresetId): string {

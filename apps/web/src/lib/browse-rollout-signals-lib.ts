@@ -1,4 +1,5 @@
 import type { Entry } from "@/types/registry";
+import { entryRef } from "@/lib/entry-identity";
 
 export type BrowseRolloutSignalId =
   | "source"
@@ -94,10 +95,6 @@ function rowMessage(id: BrowseRolloutSignalId, tone: BrowseRolloutSignalTone): s
   if (tone === "good") return `${signalLabel(id)} is broadly covered in current results.`;
   if (tone === "watch") return `${signalLabel(id)} is mixed and needs spot-checking.`;
   return `${signalLabel(id)} is sparse; verify before rollout decisions.`;
-}
-
-function entryRef(entry: Entry): string {
-  return `${entry.category}/${entry.slug}`;
 }
 
 function requiredMissingLabels(signals: Record<BrowseRolloutSignalId, boolean>): string[] {
