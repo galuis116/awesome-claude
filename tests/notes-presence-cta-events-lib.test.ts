@@ -63,6 +63,13 @@ describe("notes presence cta events lib", () => {
       present: true,
     });
     expect(
+      notesPresenceAnalyticsData("safety", true, "hub-highlights"),
+    ).toEqual({
+      surface: "hub-highlights",
+      noteKind: "safety",
+      present: true,
+    });
+    expect(
       notesPresenceAnalyticsData("privacy", true, "contributor-profile"),
     ).toEqual({
       surface: "contributor-profile",
