@@ -276,6 +276,7 @@ function SignalButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
+      aria-pressed={Boolean(active)}
       data-active={active || undefined}
       className={cn(
         "inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1 text-xs font-medium text-ink-muted transition-colors duration-200 ease-out hover:text-ink disabled:cursor-wait disabled:opacity-60",
