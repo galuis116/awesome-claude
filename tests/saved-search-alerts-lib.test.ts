@@ -91,6 +91,19 @@ describe("savedSearchQueryMatchesEntry", () => {
     expect(savedSearchQueryMatchesEntry(entry, "mcp")).toBe(true);
   });
 
+  it("matches on submittedBy so alerts mirror the live /browse haystack", () => {
+    // `normalizedSearchText` in data/search.ts includes `submittedBy`, so a
+    // saved search that matches only via the submitter must fire alerts too.
+    const submitted: SavedSearchAlertEntry = {
+      category: "mcp",
+      slug: "acme-server",
+      title: "Unrelated Title",
+      submittedBy: "acme-corp",
+    };
+    expect(savedSearchQueryMatchesEntry(submitted, "acme-corp")).toBe(true);
+    expect(savedSearchQueryMatchesEntry(submitted, "other-corp")).toBe(false);
+  });
+
   it("uses the shared alias map for saved-search query expansion", () => {
     const automationEntry: SavedSearchAlertEntry = {
       ...entry,
