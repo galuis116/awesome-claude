@@ -43,6 +43,7 @@ export interface SavedSearchAlertEntry {
   description?: string;
   cardDescription?: string;
   author?: string;
+  submittedBy?: string;
   tags?: string[];
   keywords?: string[];
   platforms?: Array<Platform | string>;
@@ -93,6 +94,7 @@ function normalizedEntryText(entry: SavedSearchAlertEntry) {
     entry.description,
     entry.cardDescription,
     entry.author,
+    entry.submittedBy,
     entry.trust,
     entry.source,
     ...(entry.platforms ?? []),
