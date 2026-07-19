@@ -8,7 +8,7 @@ import {
   BadgeCheck,
   type LucideIcon,
 } from "lucide-react";
-import { TrustBadge, SourceBadge } from "@/components/badges";
+import { TrustBadge, SourceBadge, InstallRiskBadge, NotesPresenceChips } from "@/components/badges";
 import type { Highlight, HighlightKind, HubStat } from "@/lib/hub-highlights";
 import { trackEvent } from "@/lib/analytics";
 import {
@@ -125,6 +125,8 @@ export function HubHighlights({
                       )
                     }
                   />
+                  <InstallRiskBadge entry={h.entry} size="xs" asLink surface="hub-highlights" />
+                  <NotesPresenceChips entry={h.entry} asLink surface="hub-highlights" />
                 </div>
               </div>
             </li>
