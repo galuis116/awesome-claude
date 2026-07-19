@@ -114,8 +114,6 @@ export function IntegrationCard({
               fallbackVersion={integration.version}
               fallbackUpdatedAt={integration.updatedAt}
               showDownloads={false}
-              asLink
-              analyticsSurface="integration-card"
             />
           ) : (
             <>
