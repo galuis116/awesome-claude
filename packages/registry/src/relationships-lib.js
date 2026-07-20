@@ -133,6 +133,15 @@ export function sourceUrls(entry) {
         ? entry.downloadUrl
         : "",
       ...(Array.isArray(entry.retrievalSources) ? entry.retrievalSources : []),
+      // Other first-class, schema-validated source-link fields that
+      // content-builder copies onto every entry. Without these, entries that
+      // share only a docs/source/package/repository link (or the plural
+      // sourceUrls[]) are invisible to relationship candidate-building.
+      entry.docsUrl,
+      entry.sourceUrl,
+      entry.packageUrl,
+      entry.repositoryUrl,
+      ...(Array.isArray(entry.sourceUrls) ? entry.sourceUrls : []),
     ]
       .map(normalizeUrl)
       .filter(Boolean),

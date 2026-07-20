@@ -183,6 +183,33 @@ describe("sourceUrls", () => {
       ),
     ).toEqual(["https://docs.example.com/a"]);
   });
+
+  it("includes docsUrl, sourceUrl, packageUrl, repositoryUrl, and plural sourceUrls[]", () => {
+    expect(
+      sourceUrls(
+        entry({
+          docsUrl: "https://docs.example.com/x",
+          sourceUrl: "https://src.example.com/y",
+          packageUrl: "https://pkg.example.com/z",
+          repositoryUrl: "https://repo.example.com/w",
+          sourceUrls: [
+            "https://plural.example.com/v",
+            "https://plural.example.com/v",
+          ],
+        }),
+      ),
+    ).toEqual([
+      "https://docs.example.com/x",
+      "https://src.example.com/y",
+      "https://pkg.example.com/z",
+      "https://repo.example.com/w",
+      "https://plural.example.com/v",
+    ]);
+  });
+
+  it("ignores a non-array sourceUrls value", () => {
+    expect(sourceUrls(entry({ sourceUrls: "not-an-array" }))).toEqual([]);
+  });
 });
 
 describe("sourceDomains", () => {
@@ -767,6 +794,28 @@ describe("buildRegistryRelationGraph", () => {
 
     const twinRow = graph.entries.find((row) => row.key === "tools:twin");
     expect(twinRow?.related.some((r) => r.key === "guides:guide")).toBe(true);
+  });
+
+  it("makes two entries that share only a packageUrl into related candidates", () => {
+    // Category overlap alone tops out at 16 (< 18 threshold), so before
+    // packageUrl was added to sourceUrls() these two never became candidates
+    // and scored null; the shared source URL now contributes 70 points.
+    const left = entry({
+      slug: "left",
+      title: "Left",
+      packageUrl: "https://pkg.example.com/thing",
+    });
+    const right = entry({
+      slug: "right",
+      title: "Right",
+      packageUrl: "https://pkg.example.com/thing",
+    });
+
+    const graph = buildRegistryRelationGraph([left, right]);
+    const leftRow = graph.entries.find((row) => row.key === "skills:left");
+    const match = leftRow?.related.find((r) => r.key === "skills:right");
+    expect(match).toBeDefined();
+    expect(match?.reasons).toContain("shared_source_url");
   });
 
   it("returns an empty entries list for an empty registry", () => {
