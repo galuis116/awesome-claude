@@ -187,3 +187,35 @@ describe("browse adoption queue lib", () => {
     expect(browseAdoptionTierClass("hold")).toContain("trust-blocked");
   });
 });
+
+describe("summary population", () => {
+  // rows keeps only the top-scored maxRows entries; counting the numerator
+  // there while labelling it with the full result count hid hold-tier entries
+  // that sat just outside the slice.
+  function population(strongCount: number, weakCount: number): Entry[] {
+    return [
+      ...Array.from({ length: strongCount }, (_, index) =>
+        entry({ ...strong, slug: `strong-${index}`, title: `Strong ${index}` }),
+      ),
+      ...Array.from({ length: weakCount }, (_, index) =>
+        entry({ ...weak, slug: `weak-${index}`, title: `Weak ${index}` }),
+      ),
+    ];
+  }
+
+  it("counts hold-tier rows that fall outside the display slice", () => {
+    const state = browseAdoptionQueueState(population(8, 12), "balanced");
+
+    expect(state.rows).toHaveLength(8);
+    expect(state.summary).toContain("12/20");
+    expect(state.summary).toContain("hold tier");
+  });
+
+  it("draws the numerator and denominator from the same population", () => {
+    const state = browseAdoptionQueueState(population(3, 5), "balanced");
+    const [, numerator, denominator] = /(\d+)\/(\d+)/.exec(state.summary) ?? [];
+
+    expect(Number(denominator)).toBe(state.scannedCount);
+    expect(Number(numerator)).toBeLessThanOrEqual(Number(denominator));
+  });
+});

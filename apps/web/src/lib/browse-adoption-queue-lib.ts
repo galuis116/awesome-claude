@@ -206,7 +206,12 @@ export function browseAdoptionQueueState(
   preset: BrowseAdoptionPresetId,
   maxRows = 8,
 ): BrowseAdoptionQueueState {
-  const rows = entries
+  // Scored across the whole result set. `rows` slices this for display, but the
+  // summary counts stay on the full population so its numerator and
+  // `scannedCount` denominator describe the same set - counting only the
+  // top-scored slice reported "0 in hold tier" while hold-tier entries sat just
+  // outside it.
+  const scored = entries
     .map((entry) => {
       const signals = signalMap(entry);
       const blockers = blockersFromSignals(signals, preset);
@@ -223,13 +228,13 @@ export function browseAdoptionQueueState(
         confidence: confidenceScore(signals),
       } satisfies BrowseAdoptionQueueRow;
     })
-    .sort((a, b) => b.readinessScore - a.readinessScore || a.title.localeCompare(b.title))
-    .slice(0, maxRows);
+    .sort((a, b) => b.readinessScore - a.readinessScore || a.title.localeCompare(b.title));
+  const rows = scored.slice(0, maxRows);
 
   return {
     preset,
     heading: headingForPreset(preset),
-    summary: summary(rows, entries.length),
+    summary: summary(scored, scored.length),
     scannedCount: entries.length,
     rows,
     readyCount: rows.filter((row) => row.tier === "ready").length,

@@ -179,7 +179,12 @@ export function browseDecisionConfidenceState(
   preset: BrowseConfidencePresetId,
   maxEntries = 8,
 ): BrowseDecisionConfidenceState {
-  const mapped = entries
+  // Scored across the whole result set. `mapped` slices this for display, but
+  // the summary counts stay on the full population so its numerator and
+  // `scannedCount` denominator describe the same set - counting only the
+  // top-scored slice reported "0 low-confidence" while low-confidence entries
+  // sat just outside it.
+  const scored = entries
     .map((entry) => {
       const signalState = signals(entry);
       const missingSignals = (Object.keys(signalState) as BrowseConfidenceSignalId[])
@@ -197,13 +202,13 @@ export function browseDecisionConfidenceState(
         recommendation: recommendationFor(confidenceScore, missingSignals, entry),
       } satisfies BrowseConfidenceEntry;
     })
-    .sort((a, b) => b.confidenceScore - a.confidenceScore || a.title.localeCompare(b.title))
-    .slice(0, maxEntries);
+    .sort((a, b) => b.confidenceScore - a.confidenceScore || a.title.localeCompare(b.title));
+  const mapped = scored.slice(0, maxEntries);
 
   return {
     preset,
     heading: headingForPreset(preset),
-    summary: summary(mapped, entries.length),
+    summary: summary(scored, scored.length),
     scannedCount: entries.length,
     highCount: mapped.filter((row) => row.band === "high").length,
     mediumCount: mapped.filter((row) => row.band === "medium").length,
