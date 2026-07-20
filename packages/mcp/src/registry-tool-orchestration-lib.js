@@ -1004,6 +1004,27 @@ export async function callRegistryTool(name, args = {}, options = {}) {
   }
 
   let result;
+  try {
+    result = await dispatchReadOnlyTool(name, parsedArgs, options);
+  } catch (error) {
+    // Artifact reads (missing file, wrong --data-dir, corrupt JSON) throw from
+    // deep inside the handlers. Without this boundary they escape through the
+    // SDK request handler as a raw transport error, bypassing the tool's own
+    // outputSchema. Report them as the domain-level "unavailable" envelope the
+    // HTTP-backed and remote-proxy paths already return.
+    return withPublicPolicy(
+      unavailable(
+        "HeyClaude registry data is unavailable.",
+        error instanceof Error ? error.message : String(error),
+      ),
+    );
+  }
+
+  return withPublicPolicy(result);
+}
+
+async function dispatchReadOnlyTool(name, parsedArgs, options) {
+  let result;
   switch (name) {
     case "registry.search":
       result = await searchRegistry(parsedArgs, options);
@@ -1091,5 +1112,5 @@ export async function callRegistryTool(name, args = {}, options = {}) {
       break;
   }
 
-  return withPublicPolicy(result);
+  return result;
 }
