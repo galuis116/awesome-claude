@@ -417,7 +417,17 @@ export function buildBrandAssetMetadata(data = {}, options = {}) {
           siteUrl: options.assetBaseUrl || options.siteUrl,
         })
       : "");
-  const brandLogoUrl = clean(data.brandLogoUrl);
+  // Mirrors the icon fallback above: a manual value still wins, and otherwise
+  // the logo resolves through the same proxy, so brandAssetSource:"brandfetch"
+  // describes both fields rather than only the icon.
+  const brandLogoUrl =
+    clean(data.brandLogoUrl) ||
+    (shouldUseBrandfetch
+      ? brandAssetProxyUrl(brandDomain, {
+          kind: "logo",
+          siteUrl: options.assetBaseUrl || options.siteUrl,
+        })
+      : "");
   const safeBrandIconUrl =
     brandIconUrl && isAllowedBrandAssetUrl(brandIconUrl) ? brandIconUrl : "";
   const safeBrandLogoUrl =
