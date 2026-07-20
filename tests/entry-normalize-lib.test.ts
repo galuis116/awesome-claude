@@ -475,7 +475,9 @@ describe("buildEntryFromRegistry", () => {
       dateAdded: "2026-03-01",
       claimStatus: "verified",
       claimed: true,
-      reviewed: true,
+      // This fixture has no `reviewedBy`, so there is no named maintainer
+      // sign-off to report.
+      reviewed: false,
       harness: ["claude-code"],
     });
     expect(entry.relatedEntries).toEqual([
@@ -551,9 +553,35 @@ describe("buildEntryFromRegistry", () => {
     expect(entry.skillType).toBe("general");
     expect(entry.skillLevel).toBe("foundational");
     expect(entry.verificationStatus).toBe("validated");
-    expect(entry.reviewed).toBe(true);
+    // `packageVerified` + `reviewedAt` are automated signals, not a maintainer
+    // sign-off, so they must not satisfy `reviewed`.
+    expect(entry.reviewed).toBe(false);
     expect(entry.repoUrl).toBeUndefined();
     expect(entry.sourceUrl).toBe("https://github.com/example/repo");
+  });
+
+  it("only reports reviewed for an actual named reviewer", () => {
+    // `contentUpdatedAt` is a build-time stamp the content pipeline sets when
+    // frontmatter omits one — no human reviewed anything, so the
+    // "Maintainer-reviewed" claim must not be satisfied by it.
+    const buildStampOnly = buildEntryFromRegistry(
+      baseEntry({ contentUpdatedAt: "2026-02-01T00:00:00.000Z" }),
+      attribution(),
+    );
+    expect(buildStampOnly.reviewed).toBe(false);
+
+    // Automated package verification is likewise not a maintainer sign-off.
+    const packageVerifiedOnly = buildEntryFromRegistry(
+      baseEntry({ packageVerified: true }),
+      attribution(),
+    );
+    expect(packageVerifiedOnly.reviewed).toBe(false);
+
+    const namedReviewer = buildEntryFromRegistry(
+      baseEntry({ reviewedBy: "Maintainer Name" }),
+      attribution(),
+    );
+    expect(namedReviewer.reviewed).toBe(true);
   });
 
   it("uses copy payload precedence and source url fallbacks", () => {

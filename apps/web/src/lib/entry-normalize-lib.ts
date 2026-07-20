@@ -445,7 +445,11 @@ export function buildEntryFromRegistry(entry: RegistryEntry, attribution: EntryA
     repoStats: normalizeRepoStats(entry),
     relatedEntries: normalizeRelatedEntries(entry.relatedEntries),
     dateAdded: entry.dateAdded ?? entry.contentUpdatedAt?.slice(0, 10) ?? "2026-01-01",
-    reviewed: Boolean(reviewedAt || entry.packageVerified),
+    // Requires a named reviewer. `reviewedAt` falls back to the build-time
+    // `contentUpdatedAt`, and `packageVerified` is an automated package check,
+    // so neither evidences the human sign-off the "Maintainer-reviewed" label
+    // claims.
+    reviewed: Boolean(entry.reviewedBy),
     claimed: normalizeClaimStatus(entry.claimStatus) === "verified",
     claimStatus: normalizeClaimStatus(entry.claimStatus),
     safetyNotes,
