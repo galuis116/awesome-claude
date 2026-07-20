@@ -1,5 +1,15 @@
 # @heyclaude/mcp Changelog
 
+## [0.11.3](https://github.com/JSONbored/awesome-claude/compare/mcp-v0.11.2...mcp-v0.11.3) (2026-07-20)
+
+
+### Bug Fixes
+
+* **mcp:** give entry.related a consistent shape on both paths ([373be05](https://github.com/JSONbored/awesome-claude/commit/373be058d343ab79bae794fe478e700e60760c16))
+* **mcp:** give entry.related a consistent shape on both paths ([54fb8fb](https://github.com/JSONbored/awesome-claude/commit/54fb8fb33f3b66f2cdf8a2675e4477bd5c537877))
+* **mcp:** return the unavailable envelope when an artifact fails to load ([26b1bb8](https://github.com/JSONbored/awesome-claude/commit/26b1bb8927ddda8d0939b7ab0956edf79963ccf7))
+* **mcp:** return the unavailable envelope when an artifact fails to load ([c23592e](https://github.com/JSONbored/awesome-claude/commit/c23592e8cfc4884e253b39f6804b4088f77887da))
+
 ## [0.11.2](https://github.com/JSONbored/awesome-claude/compare/mcp-v0.11.1...mcp-v0.11.2) (2026-07-20)
 
 
