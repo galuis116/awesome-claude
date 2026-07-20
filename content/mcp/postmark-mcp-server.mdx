@@ -3,11 +3,11 @@ title: Postmark MCP Server for Claude
 slug: postmark-mcp-server
 category: mcp
 description: >-
-  Connect Claude to Postmark — send transactional email, manage templates, search messages, and
-  diagnose delivery, bounces, and suppressions — with the official ActiveCampaign Postmark MCP server.
-cardDescription: "Official Postmark MCP server: send email, manage templates, and diagnose delivery from Claude."
-seoTitle: "Postmark MCP Server for Claude — Transactional Email"
-seoDescription: "Connect Claude to Postmark with the official MCP server: send transactional email, manage templates, search messages, and diagnose delivery, bounces, and suppressions."
+  ActiveCampaign's official server that wires Postmark into Claude over stdio, exposing 24 tools for
+  outbound mail, template authoring, message lookup, bounce handling, and suppression list cleanup.
+cardDescription: "Drive Postmark's transactional-email API from natural language — 24 stdio tools for templates, batches, and deliverability triage."
+seoTitle: "Postmark MCP Server — Send & Diagnose Email in Claude"
+seoDescription: "Wire Postmark into Claude with ActiveCampaign's official MCP server: 24 stdio tools to send templated mail, run batches, look up messages, and triage bounces."
 author: ActiveCampaign
 authorProfileUrl: "https://postmarkapp.com"
 dateAdded: "2026-06-17"
@@ -22,7 +22,7 @@ retrievalSources:
 installable: true
 installCommand: "git clone https://github.com/ActiveCampaign/postmark-mcp && cd postmark-mcp && npm install"
 usageSnippet: >-
-  Ask Claude to send a templated email, search recent outbound messages, or diagnose a delivery issue.
+  Ask Claude to fire off a templated welcome message, pull yesterday's outbound activity, or explain why a recipient bounced.
 copySnippet: |-
   {
     "mcpServers": {
