@@ -1,5 +1,12 @@
 # @heyclaude/mcp Changelog
 
+## [0.11.2](https://github.com/JSONbored/awesome-claude/compare/mcp-v0.11.1...mcp-v0.11.2) (2026-07-20)
+
+
+### Bug Fixes
+
+* **registry:** recognize www.github.com in repo and profile URL parsers ([#5333](https://github.com/JSONbored/awesome-claude/issues/5333)) ([c736d7a](https://github.com/JSONbored/awesome-claude/commit/c736d7a308a76d5777f4ff2c9a6df06a8df082f7)), closes [#5220](https://github.com/JSONbored/awesome-claude/issues/5220)
+
 ## [0.11.1](https://github.com/JSONbored/awesome-claude/compare/mcp-v0.11.0...mcp-v0.11.1) (2026-07-14)
 
 
