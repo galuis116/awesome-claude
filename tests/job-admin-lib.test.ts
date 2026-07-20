@@ -447,6 +447,46 @@ describe("queryAdminJobs", () => {
     expect(db.allCalls.at(-1)?.values.slice(-2)).toEqual([50, 0]);
   });
 
+  it("flags each row's public visibility via the active/expiry/exposure gate", async () => {
+    const db = new FakeD1();
+    db.jobRows = [
+      // active, far-future expiry, fully valid -> visible on /jobs.
+      validActiveJobRow({
+        slug: "visible",
+        status: "active",
+        expires_at: "2099-01-01",
+      }),
+      // active but past its expiry -> hidden on /jobs (the exact case an admin
+      // otherwise couldn't distinguish from a live "active" row).
+      validActiveJobRow({
+        slug: "expired",
+        status: "active",
+        expires_at: "2000-01-01",
+      }),
+      // not active at all.
+      validActiveJobRow({
+        slug: "pending",
+        status: "pending_review",
+        expires_at: "2099-01-01",
+      }),
+      // active + unexpired but fails the public exposure gate (no apply/source URL).
+      validActiveJobRow({
+        slug: "no-apply",
+        status: "active",
+        expires_at: "2099-01-01",
+        apply_url: "",
+        source_url: "",
+      }),
+    ];
+    const jobs = await queryAdminJobs(db);
+    const flag = (slug: string) =>
+      jobs.find((job) => job.slug === slug)?.publiclyVisible;
+    expect(flag("visible")).toBe(true);
+    expect(flag("expired")).toBe(false);
+    expect(flag("pending")).toBe(false);
+    expect(flag("no-apply")).toBe(false);
+  });
+
   it.each([
     ["status", "active", "free-curated"],
     ["tier", "featured", "featured-manual"],

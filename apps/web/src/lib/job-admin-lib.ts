@@ -231,10 +231,25 @@ export async function getJobsHealth(db: D1DatabaseLike) {
   };
 }
 
+/** An admin job row plus whether it would currently pass the public list's gate. */
+export type AdminJobListing = JobListing & { publiclyVisible: boolean };
+
+/**
+ * Whether a job would be visible on the public `/jobs` list right now, mirroring
+ * `queryActiveJobs`'s gate exactly: status `active`, not past its `expiresAt`,
+ * and passing `validateJobPublicExposure`. Lets the admin list flag rows that are
+ * "active" in the table but silently hidden from the public site.
+ */
+export function isJobPubliclyVisible(job: JobListing, now: number = Date.now()): boolean {
+  if (job.status !== "active") return false;
+  if (job.expiresAt && new Date(job.expiresAt).getTime() < now) return false;
+  return validateJobPublicExposure(job as Record<string, unknown>).ok;
+}
+
 export async function queryAdminJobs(
   db: D1DatabaseLike,
   filters: JobAdminListFilters = {},
-): Promise<JobListing[]> {
+): Promise<AdminJobListing[]> {
   const where: string[] = [];
   const values: unknown[] = [];
 
@@ -272,7 +287,10 @@ export async function queryAdminJobs(
     .bind(...values, limit, offset)
     .all<JobAdminRow>();
 
-  return results.map((row) => mapJobListingRow(row));
+  return results.map((row) => {
+    const job = mapJobListingRow(row);
+    return { ...job, publiclyVisible: isJobPubliclyVisible(job) };
+  });
 }
 
 export async function queryAdminJobBySlug(
