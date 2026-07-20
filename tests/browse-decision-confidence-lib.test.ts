@@ -211,3 +211,43 @@ describe("browse decision confidence lib", () => {
     expect(browseConfidenceBandClass("low")).toContain("trust-blocked");
   });
 });
+
+describe("summary population", () => {
+  // The display slice keeps only the top-scored maxEntries rows. Counting the
+  // numerator there while labelling it with the full result count reported
+  // "0 low-confidence" for a set that was mostly low-confidence.
+  function population(strongCount: number, weakCount: number): Entry[] {
+    return [
+      ...Array.from({ length: strongCount }, (_, index) =>
+        entry({
+          ...strong,
+          slug: `strong-${index}`,
+          title: `Strong ${index}`,
+        }),
+      ),
+      ...Array.from({ length: weakCount }, (_, index) =>
+        entry({
+          ...weak,
+          slug: `weak-${index}`,
+          title: `Weak ${index}`,
+        }),
+      ),
+    ];
+  }
+
+  it("counts low-confidence entries that fall outside the display slice", () => {
+    const state = browseDecisionConfidenceState(population(8, 12), "balanced");
+
+    expect(state.entries).toHaveLength(8);
+    expect(state.summary).toContain("12/20");
+    expect(state.summary).toContain("low-confidence");
+  });
+
+  it("draws the numerator and denominator from the same population", () => {
+    const state = browseDecisionConfidenceState(population(3, 5), "balanced");
+    const [, numerator, denominator] = /(\d+)\/(\d+)/.exec(state.summary) ?? [];
+
+    expect(Number(denominator)).toBe(state.scannedCount);
+    expect(Number(numerator)).toBeLessThanOrEqual(Number(denominator));
+  });
+});
