@@ -528,3 +528,106 @@ describe("www.github.com source URL normalization", () => {
     );
   });
 });
+
+describe("checks ported from validate-content-policy", () => {
+  // These two ran only in CI, so the risk report maintainers actually read
+  // could show "medium, 0 blocking flags" for a submission the gate blocks.
+  const SHA = "a".repeat(40);
+
+  function flagsFor(fields: Record<string, unknown>) {
+    const report = analyzeSubmissionDraftRisk({ title: "t", body: "b" }, {
+      fields,
+    } as never);
+    return {
+      ids: (report.reviewFlags || []).map((flag) => flag.id),
+      flags: report.reviewFlags || [],
+      tier: report.riskTier,
+    };
+  }
+
+  it("flags affiliate and referral source URLs as high", () => {
+    for (const url of [
+      "https://example.com/tool?ref=abc123",
+      "https://example.com/tool?utm_affiliate=x",
+      "https://example.com/referral/xyz",
+    ]) {
+      const { ids, flags } = flagsFor({ github_url: url });
+      expect(ids, url).toContain("affiliate_referral_url");
+      expect(
+        flags.find((flag) => flag.id === "affiliate_referral_url")?.severity,
+      ).toBe("high");
+    }
+  });
+
+  it("does not treat a docs reference path as an affiliate link", () => {
+    expect(
+      flagsFor({ github_url: "https://go.dev/ref/mod" }).ids,
+    ).not.toContain("affiliate_referral_url");
+    expect(
+      flagsFor({ github_url: "https://github.com/acme/tool" }).ids,
+    ).not.toContain("affiliate_referral_url");
+  });
+
+  it("flags a cloned installer script with no immutable source as critical", () => {
+    const { ids, flags, tier } = flagsFor({
+      github_url: "https://github.com/acme/tool",
+      install_command:
+        "git clone https://github.com/acme/tool && cd tool && ./install.sh",
+    });
+
+    expect(ids).toContain("mutable_script_install_source");
+    expect(
+      flags.find((flag) => flag.id === "mutable_script_install_source")
+        ?.severity,
+    ).toBe("critical");
+    expect(tier).toBe("critical");
+  });
+
+  it("accepts a cloned installer script pinned to a full commit SHA", () => {
+    const { ids } = flagsFor({
+      github_url: `https://raw.githubusercontent.com/acme/tool/${SHA}/install.sh`,
+      install_command: `git clone https://github.com/acme/tool && cd tool && git checkout ${SHA} && ./install.sh`,
+    });
+
+    expect(ids).not.toContain("mutable_script_install_source");
+  });
+
+  it("leaves submissions that trigger neither check unchanged", () => {
+    const { ids, tier } = flagsFor({
+      github_url: "https://github.com/acme/tool",
+      install_command: "npm install acme",
+    });
+
+    expect(ids).not.toContain("affiliate_referral_url");
+    expect(ids).not.toContain("mutable_script_install_source");
+    expect(tier).toBe("medium");
+  });
+
+  it("surfaces both flags as direct-PR request-changes reasons", () => {
+    const reasons = directContentRequestChangesReasons({
+      subject: {
+        type: "pull_request",
+        changedFileCount: 1,
+        contentFileCount: 1,
+      },
+      sourceType: "external_direct",
+      reviewFlags: [
+        { id: "affiliate_referral_url", severity: "high", summary: "" },
+        {
+          id: "mutable_script_install_source",
+          severity: "critical",
+          summary: "",
+        },
+      ],
+    });
+
+    expect(reasons.join(" | ")).toContain("affiliate_referral_url");
+    expect(reasons.join(" | ")).toContain("mutable_script_install_source");
+    // The critical flag must not also produce the generic catch-all reason.
+    expect(
+      reasons.filter((reason) =>
+        reason.includes("mutable_script_install_source"),
+      ),
+    ).toHaveLength(1);
+  });
+});
