@@ -1107,6 +1107,40 @@ function isMutableGithubSourceUrl(value) {
   return Boolean(source && !FULL_COMMIT_SHA_PATTERN.test(source.ref));
 }
 
+/**
+ * Recursive-force removal aimed at the filesystem root or the user's home.
+ *
+ * The previous single regex required the literal `-rf` token and a word
+ * boundary after the target, so it missed `rm -rf /` and `rm -rf ~` - the two
+ * most literal ways to write "delete everything" - along with every
+ * flag-ordering variant. Parse the flag run instead of pattern-matching one
+ * spelling: any option cluster carrying both recursive and force counts,
+ * whether written `-rf`, `-fr`, `-r -f`, or `--recursive --force`.
+ *
+ * Targets stay deliberately narrow (root, `~`, `$HOME`). Relative paths like
+ * `./build` are ordinary cleanup and must not flag.
+ */
+function referencesDestructiveRootRemoval(value) {
+  const text = String(value || "");
+  const pattern =
+    /\brm\b((?:\s+-{1,2}[a-z][a-z-]*)+)\s+(?:\/[^\s;&|)'"`]*|~[^\s;&|)'"`]*|\$home\b|\$\{home\})/gi;
+
+  for (const match of text.matchAll(pattern)) {
+    const flags = match[1].toLowerCase().split(/\s+/).filter(Boolean);
+    const recursive = flags.some(
+      (flag) =>
+        flag === "--recursive" || (!flag.startsWith("--") && /r/.test(flag)),
+    );
+    const force = flags.some(
+      (flag) =>
+        flag === "--force" || (!flag.startsWith("--") && /f/.test(flag)),
+    );
+    if (recursive && force) return true;
+  }
+
+  return false;
+}
+
 function addContentRiskSignals(report, fields, text) {
   const installText = lower(
     [
@@ -1213,7 +1247,7 @@ function addContentRiskSignals(report, fields, text) {
   }
 
   if (
-    /rm\s+-rf\s+(\/|~|\$home)\b/i.test(installText) ||
+    referencesDestructiveRootRemoval(installText) ||
     /\b(curl|wget)\b[\s\S]{0,120}\|[\s\S]{0,40}\b(sudo\s+)?(sh|bash)\b/i.test(
       installText,
     ) ||

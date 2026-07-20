@@ -631,3 +631,43 @@ describe("checks ported from validate-content-policy", () => {
     ).toHaveLength(1);
   });
 });
+
+describe("destructive rm detection", () => {
+  function flagged(installCommand: string) {
+    const report = analyzeSubmissionDraftRisk({ title: "t", body: "b" }, {
+      fields: { install_command: installCommand },
+    } as never);
+    return (report.reviewFlags || []).some(
+      (flag) => flag.id === "unsafe_install_pipeline",
+    );
+  }
+
+  // The old regex required a literal "-rf" token plus a word boundary after
+  // the target, so the two most literal destructive forms slipped through.
+  it.each([
+    "rm -rf /",
+    "rm -rf ~",
+    "rm -rf $HOME",
+    "rm -r -f /",
+    "rm -fr /",
+    "rm --recursive --force /",
+    "rm -r --force ~",
+    "rm -Rf /",
+    "rm -rf /etc",
+    "sudo rm -rf / --no-preserve-root",
+  ])("flags %s", (command) => {
+    expect(flagged(command)).toBe(true);
+  });
+
+  it.each([
+    "rm -rf ./build",
+    "rm -rf node_modules",
+    "rm -f /tmp/scratch",
+    "rm -r /tmp/scratch",
+    "git rm -r --cached .",
+    "npm run rm-rf-helper",
+    "npm install acme",
+  ])("does not flag %s", (command) => {
+    expect(flagged(command)).toBe(false);
+  });
+});
