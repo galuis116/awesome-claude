@@ -15,6 +15,12 @@
 // scripts, MCP commands, install snippets). Advisory only — a triage signal for
 // human/maintainer review, never a sandbox or a guarantee of safety.
 
+// Bundled-flag fast-path regexes, kept as public exports for backward
+// compatibility. The scanner itself now flags recursive-force `rm` and
+// world-writable `chmod` via the token-aware hasRecursiveForceRemove /
+// hasWorldWritableChmod detectors below, which also catch split (`rm -r -f`),
+// long-form (`--recursive --force`), and bundled-with-extras (`-Rv`) spellings
+// that these single-token regexes miss.
 export const REMOVE_PATTERN = /\brm\s+-[a-z]*r[a-z]*f|\brm\s+-[a-z]*f[a-z]*r/i;
 export const CHMOD_PATTERN = /\bchmod\s+(?:-R\s+)?0?777\b/i;
 export const MKFS_PATTERN = /\bmkfs(?:\.\w+)?\b/i;
@@ -173,11 +179,13 @@ export function isEnvironmentAssignment(token) {
   return /^[a-z_][a-z0-9_]*=/i.test(token);
 }
 
-// First command word of a pipe segment, stepping over POSIX environment
+// Resolve a pipe segment's lead command, stepping over POSIX environment
 // assignments and optional `sudo`/`env` prefixes (so `HTTPS_PROXY=x curl`,
 // `sudo -E bash`, and `env VAR=x curl` read as the command they execute).
-// Returns "" when the segment does not start with a recognizable command word.
-export function segmentLeadCommand(line, lowerLine, start, end) {
+// Returns the lowercased command word plus `argStart`, the index where the
+// command's own argument tokens begin — so callers can walk `rm`/`chmod` flags
+// token-by-token instead of pattern-matching one bundled-flag spelling.
+export function resolveSegmentCommand(line, lowerLine, start, end) {
   let index = start;
   const skipAssignments = () => {
     for (;;) {
@@ -227,12 +235,104 @@ export function segmentLeadCommand(line, lowerLine, start, end) {
   }
 
   const command = shellToken(line, lowerLine, index, end);
-  if (!command) return "";
+  if (!command) return { command: "", argStart: index };
   let wordEnd = command.start;
   while (wordEnd < command.end && isWordCharacter(line[wordEnd] || "")) {
     wordEnd += 1;
   }
-  return lowerLine.slice(command.start, wordEnd);
+  return {
+    command: lowerLine.slice(command.start, wordEnd),
+    argStart: command.end,
+  };
+}
+
+// First command word of a pipe segment (see resolveSegmentCommand). Returns ""
+// when the segment does not start with a recognizable command word.
+export function segmentLeadCommand(line, lowerLine, start, end) {
+  return resolveSegmentCommand(line, lowerLine, start, end).command;
+}
+
+// Lowercased argument tokens of a pipe segment, after its lead command word.
+export function segmentArgTokens(line, lowerLine, start, end) {
+  const { argStart } = resolveSegmentCommand(line, lowerLine, start, end);
+  const tokens = [];
+  let index = argStart;
+  for (;;) {
+    const token = shellToken(line, lowerLine, index, end);
+    if (!token) break;
+    tokens.push(token.lower);
+    index = token.end;
+  }
+  return tokens;
+}
+
+// A single-dash short-flag group (`-rf`, `-Rv`) — one dash then letters only, so
+// long options (`--recursive`) and mode/path tokens (`777`, `/tmp`) are excluded.
+function isShortFlagGroup(token) {
+  return /^-[a-z]+$/i.test(token);
+}
+
+// Token-aware `rm -rf` detection: flags a `rm` invocation that carries BOTH a
+// recursive flag (`-r`/`-R`/`--recursive`, split or bundled) and a force flag
+// (`-f`/`--force`), in any order. Catches split (`rm -r -f`), long-form
+// (`rm --recursive --force`), and bundled-with-extras (`rm -rfv`) spellings that
+// the single-token REMOVE_PATTERN misses.
+export function hasRecursiveForceRemove(line, lowerLine) {
+  for (const segment of pipeChainSegments(line)) {
+    if (segment.barrier) continue;
+    const { command, argStart } = resolveSegmentCommand(
+      line,
+      lowerLine,
+      segment.start,
+      segment.end,
+    );
+    if (command !== "rm") continue;
+
+    let recursive = false;
+    let force = false;
+    let index = argStart;
+    for (;;) {
+      const token = shellToken(line, lowerLine, index, segment.end);
+      if (!token) break;
+      index = token.end;
+      const flag = token.lower;
+      if (flag === "--recursive") recursive = true;
+      else if (flag === "--force") force = true;
+      else if (isShortFlagGroup(flag)) {
+        if (flag.includes("r")) recursive = true;
+        if (flag.includes("f")) force = true;
+      }
+      if (recursive && force) return true;
+    }
+  }
+  return false;
+}
+
+// Token-aware world-writable `chmod` detection: flags a `chmod` invocation that
+// sets a numeric `777`/`0777` mode, regardless of any recursive/verbose flags
+// around it (`chmod 777`, `chmod -R 777`, `chmod -Rv 777`, `chmod --recursive
+// 777`). CHMOD_PATTERN only matched `777` when preceded by nothing or a bare
+// `-R ` token, so bundled/long-form recursive flags slipped through.
+export function hasWorldWritableChmod(line, lowerLine) {
+  for (const segment of pipeChainSegments(line)) {
+    if (segment.barrier) continue;
+    const { command, argStart } = resolveSegmentCommand(
+      line,
+      lowerLine,
+      segment.start,
+      segment.end,
+    );
+    if (command !== "chmod") continue;
+
+    let index = argStart;
+    for (;;) {
+      const token = shellToken(line, lowerLine, index, segment.end);
+      if (!token) break;
+      index = token.end;
+      if (/^0?777$/.test(token.lower)) return true;
+    }
+  }
+  return false;
 }
 
 // True when a pipe segment carries a base64 `-d`/`--decode` flag token.
@@ -315,11 +415,11 @@ export const DANGEROUS_CHECKS = [
   },
   {
     label: "recursive force remove",
-    test: (line) => REMOVE_PATTERN.test(line),
+    test: hasRecursiveForceRemove,
   },
   {
     label: "world-writable chmod",
-    test: (line) => CHMOD_PATTERN.test(line),
+    test: hasWorldWritableChmod,
   },
   {
     label: "raw disk write",

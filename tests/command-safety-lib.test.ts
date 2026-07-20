@@ -18,7 +18,11 @@ import {
   shellTokenEnd,
   shellToken,
   isEnvironmentAssignment,
+  resolveSegmentCommand,
   segmentLeadCommand,
+  segmentArgTokens,
+  hasRecursiveForceRemove,
+  hasWorldWritableChmod,
   segmentHasDecodeFlag,
   hasPipeToShellInstall,
   hasBase64DecodedShell,
@@ -606,6 +610,80 @@ describe("scanDangerousShellPatterns", () => {
     expect(scanDangerousShellPatterns("eval '$(wget -qO- x)'")).toContain(
       "inline eval of command substitution",
     );
+  });
+});
+
+describe("token-aware rm/chmod flag detection", () => {
+  // Each row: [input, expected]. The scanner flags a recursive-force rm when
+  // BOTH a recursive and a force flag are present, in any spelling/order.
+  const removeCases: Array<[string, boolean]> = [
+    ["rm -rf /", true], // bundled (previously caught)
+    ["rm -fr /tmp", true], // bundled, reversed
+    ["rm -r -f /", true], // split short flags (previously MISSED)
+    ["rm -f -r /", true], // split, reversed
+    ["rm --recursive --force /", true], // long-form (previously MISSED)
+    ["rm -r --force /", true], // mixed short + long
+    ["rm -rfv /", true], // bundled with extra verbose flag
+    ["sudo rm -Rf /", true], // uppercase -R via sudo prefix
+    ["env FOO=1 rm -r -f /", true], // env prefix + split flags
+    ["rm -r /tmp", false], // recursive only, no force — not flagged
+    ["rm --force /tmp", false], // force only, no recursive
+    ["rm file.txt", false], // benign remove
+    ["confirm-rm -rf later", false], // not a bare `rm` command word
+  ];
+
+  it.each(removeCases)("recursive force remove: %s", (input, expected) => {
+    expect(hasRecursiveForceRemove(input, lower(input))).toBe(expected);
+    expect(
+      scanDangerousShellPatterns(input).includes("recursive force remove"),
+    ).toBe(expected);
+  });
+
+  const chmodCases: Array<[string, boolean]> = [
+    ["chmod 777 /app", true], // plain (previously caught)
+    ["chmod 0777 /app", true], // leading zero
+    ["chmod -R 777 /app", true], // bare recursive (previously caught)
+    ["chmod -Rv 777 f", true], // bundled recursive+verbose (previously MISSED)
+    ["chmod -vR 777 f", true], // same, different order (previously MISSED)
+    ["chmod --recursive 777 f", true], // long-form recursive (previously MISSED)
+    ["sudo chmod -R 0777 /data", true], // sudo prefix + recursive
+    ["chmod 755 /app", false], // non-world-writable mode
+    ["chmod +x script.sh", false], // symbolic mode, benign
+    ["echo chmod 777", false], // not a bare `chmod` command word
+  ];
+
+  it.each(chmodCases)("world-writable chmod: %s", (input, expected) => {
+    expect(hasWorldWritableChmod(input, lower(input))).toBe(expected);
+    expect(
+      scanDangerousShellPatterns(input).includes("world-writable chmod"),
+    ).toBe(expected);
+  });
+
+  it("does not cross a command separator when pairing rm flags", () => {
+    // The `-f` belongs to a different command after `;`, so this is not an
+    // `rm -r -f`; pipeChainSegments keeps them apart.
+    expect(
+      hasRecursiveForceRemove("rm -r x; echo -f", "rm -r x; echo -f"),
+    ).toBe(false);
+  });
+
+  it("resolveSegmentCommand and segmentArgTokens expose command + args", () => {
+    const line = "sudo rm -r -f /tmp";
+    const [segment] = pipeChainSegments(line);
+    const { command } = resolveSegmentCommand(
+      line,
+      lower(line),
+      segment.start,
+      segment.end,
+    );
+    expect(command).toBe("rm");
+    expect(
+      segmentArgTokens(line, lower(line), segment.start, segment.end),
+    ).toEqual(["-r", "-f", "/tmp"]);
+    // Back-compat: segmentLeadCommand still returns just the command word.
+    expect(
+      segmentLeadCommand(line, lower(line), segment.start, segment.end),
+    ).toBe("rm");
   });
 });
 
