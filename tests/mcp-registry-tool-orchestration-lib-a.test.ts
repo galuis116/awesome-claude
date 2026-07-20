@@ -2917,3 +2917,40 @@ describe("registry-tool-orchestration-lib validation (a)", () => {
     expect(result.ok).toBe(false);
   });
 });
+
+describe("read-only tool artifact failures", () => {
+  // A missing artifact (partial deploy, wrong --data-dir, corrupt JSON) used to
+  // throw out through the MCP SDK request handler as a raw transport error,
+  // bypassing each tool's declared outputSchema. It has to come back as the
+  // same "unavailable" envelope the HTTP-backed and remote-proxy paths return.
+  const missingDataDir = { dataDir: "/nonexistent-heyclaude-data-dir" };
+
+  const artifactBackedCalls: Array<[string, Record<string, unknown>]> = [
+    ["registry.search", { query: "database" }],
+    ["registry.list", { category: "mcp" }],
+    ["registry.updates", {}],
+    ["registry.stats", {}],
+    ["entry.related", { category: "mcp", slug: "duckdb-mcp-server" }],
+  ];
+
+  it.each(artifactBackedCalls)(
+    "returns a clean unavailable envelope for %s",
+    async (tool, args) => {
+      const result = await callRegistryTool(tool, args, missingDataDir);
+
+      expect(result.ok).toBe(false);
+      expect(result.error?.code).toBe("unavailable");
+      expect(typeof result.error?.message).toBe("string");
+    },
+  );
+
+  it("does not leak the raw thrown error as a rejection", async () => {
+    await expect(
+      callRegistryTool(
+        "registry.search",
+        { query: "database" },
+        missingDataDir,
+      ),
+    ).resolves.toMatchObject({ ok: false });
+  });
+});
