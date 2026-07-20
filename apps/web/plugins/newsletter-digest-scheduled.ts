@@ -95,6 +95,16 @@ export default definePlugin((nitroApp) => {
               });
               await sendResendEmail({ apiKey, from, to: reviewEmail, subject, html, text });
               console.log("[brief-generate] preview sent", { number: draft.number });
+            } else {
+              const missing = [
+                !wrote && "no new draft persisted",
+                !draft && "no draft available",
+                !reviewEmail && "BRIEF_REVIEW_EMAIL",
+                !secret && "NEWSLETTER_CONFIRM_SECRET",
+                !apiKey && "RESEND_API_KEY",
+                !from && "RESEND_FROM",
+              ].filter(Boolean);
+              console.log(`[brief-generate] preview skipped: ${missing.join(", ")}`);
             }
           } catch (error) {
             console.error("[brief-generate] generation failed", error);
@@ -112,7 +122,15 @@ export default definePlugin((nitroApp) => {
             const apiKey = getEnvString("RESEND_API_KEY");
             const segmentId = getEnvString("RESEND_SEGMENT_ID");
             const from = getEnvString("RESEND_FROM");
-            if (!apiKey || !segmentId || !from) return;
+            if (!apiKey || !segmentId || !from) {
+              const missing = [
+                !apiKey && "RESEND_API_KEY",
+                !segmentId && "RESEND_SEGMENT_ID",
+                !from && "RESEND_FROM",
+              ].filter(Boolean);
+              console.warn(`[brief-send] skipped: missing ${missing.join("/")}`);
+              return;
+            }
             const due = await getDueApprovedBriefs(new Date().toISOString());
             for (const issue of due) {
               const { subject, html, text } = buildBriefEmail({
