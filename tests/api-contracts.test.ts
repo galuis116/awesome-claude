@@ -33,6 +33,7 @@ const apiRoutes = [
   "/api/newsletter/subscribe",
   "/api/newsletter/webhook",
   "/api/public/newsletter/confirm",
+  "/api/public/newsletter/unsubscribe",
   "/api/og",
   "/api/submissions/preflight",
   "/api/download",
@@ -152,6 +153,12 @@ describe("OpenAPI route coverage", () => {
           example: "@heyclaude/mcp",
         }),
       ]),
+    });
+    expect(
+      ENDPOINTS.find((endpoint) => endpoint.id === "newsletter-unsubscribe"),
+    ).toMatchObject({
+      method: "POST",
+      path: "/api/public/newsletter/unsubscribe",
     });
     expect(
       ENDPOINTS.find((endpoint) => endpoint.id === "submissions-preflight"),
