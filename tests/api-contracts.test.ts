@@ -48,6 +48,7 @@ const apiRoutes = [
   "/api/github-stats",
   "/api/public/alerts",
   "/api/public/feeds/health",
+  "/api/public/npm/{pkg}",
   "/feed.xml",
   "/atom.xml",
   "/data/feeds/index.json",
@@ -137,6 +138,19 @@ describe("OpenAPI route coverage", () => {
       parameters: expect.arrayContaining([
         expect.objectContaining({ name: "q", in: "query", example: "mcp" }),
         expect.objectContaining({ name: "limit", in: "query", example: "5" }),
+      ]),
+    });
+    expect(
+      ENDPOINTS.find((endpoint) => endpoint.id === "publicNpm-read"),
+    ).toMatchObject({
+      method: "GET",
+      path: "/api/public/npm/{pkg}",
+      parameters: expect.arrayContaining([
+        expect.objectContaining({
+          name: "pkg",
+          in: "path",
+          example: "@heyclaude/mcp",
+        }),
       ]),
     });
     expect(
