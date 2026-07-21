@@ -10,7 +10,6 @@
  */
 import crypto from "node:crypto";
 
-import { getCopyText } from "./presentation.js";
 import categorySpec from "./category-spec.json" with { type: "json" };
 import {
   buildEntryQuality,

@@ -12,12 +12,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
-import {
-  bucketWeekly,
-  compact,
-  escapeXml,
-  WEEKS,
-} from "./lib/impact-card-core.mjs";
+import { bucketWeekly, compact, escapeXml } from "./lib/impact-card-core.mjs";
 import { meter, sparkline } from "./lib/impact-card-svg.mjs";
 
 const THEME = {

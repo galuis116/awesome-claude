@@ -7,12 +7,7 @@ import {
   normalizeEndpointUrl,
 } from "./endpoint-url.js";
 import { packageName, packageVersion } from "./package-metadata.js";
-import {
-  formatZodError,
-  jsonSchemaForTool,
-  jsonSchemaForToolOutput,
-  parseToolArguments,
-} from "./schemas.js";
+import { formatZodError, parseToolArguments } from "./schemas.js";
 import {
   buildSubmissionUrlsFromSpec,
   getSubmissionExamplesFromSpec,
@@ -59,16 +54,9 @@ import {
 } from "./registry-handlers-lib.js";
 
 import {
-  LOCAL_DRAFT_TOOL_NAMES,
   MCP_PUBLIC_POLICY,
   READ_ONLY_TOOL_NAMES,
-  TOOL_DEFINITIONS,
 } from "./registry-tools-lib.js";
-import {
-  PROMPT_DEFINITIONS,
-  getRegistryPrompt,
-  listRegistryPrompts,
-} from "./registry-prompts-lib.js";
 import {
   normalizeLimit,
   normalizeOffset,
@@ -83,11 +71,7 @@ import {
   unavailable,
   withPublicPolicy,
 } from "./registry-response-lib.js";
-import {
-  DISCOVERY_RESOURCES,
-  RESOURCE_TEMPLATES,
-  listRegistryResourceTemplates,
-} from "./registry-resource-metadata-lib.js";
+import { DISCOVERY_RESOURCES } from "./registry-resource-metadata-lib.js";
 import {
   normalizeDateFloor,
   parsedTrustArgs,
