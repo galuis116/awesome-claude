@@ -1,5 +1,23 @@
 # @heyclaude/mcp Changelog
 
+## [0.12.0](https://github.com/JSONbored/awesome-claude/compare/mcp-v0.11.3...mcp-v0.12.0) (2026-07-21)
+
+
+### Features
+
+* **mcp:** let registry.list filter by the same trust signals as registry.search ([#5375](https://github.com/JSONbored/awesome-claude/issues/5375)) ([d923038](https://github.com/JSONbored/awesome-claude/commit/d9230383914ec494f1f3f71a3765c515573254be))
+
+
+### Bug Fixes
+
+* **mcp:** report install-target compatibility for MCP entries ([#5392](https://github.com/JSONbored/awesome-claude/issues/5392)) ([b4dfa7c](https://github.com/JSONbored/awesome-claude/commit/b4dfa7cdba80f86b6670f05886d028b08a9a6ef4))
+
+
+### Documentation
+
+* **mcp:** align the plan doc and package README with the live tool surface ([511b3ad](https://github.com/JSONbored/awesome-claude/commit/511b3ad73e8bed3bffb719b5b78a856824ad926c))
+* **mcp:** align the plan doc and package README with the live tool surface ([7a94f73](https://github.com/JSONbored/awesome-claude/commit/7a94f7342b3eee46226f11594740bb0d70d08def))
+
 ## [0.11.3](https://github.com/JSONbored/awesome-claude/compare/mcp-v0.11.2...mcp-v0.11.3) (2026-07-20)
 
 
