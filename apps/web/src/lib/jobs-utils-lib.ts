@@ -95,6 +95,10 @@ export function pickDailySpotlight(
   if (pool.length === 0) return { current: null, next: null };
   const dayIndex = Math.floor(now / DAY);
   const i = ((dayIndex % pool.length) + pool.length) % pool.length;
-  const j = (i + 1) % pool.length;
-  return { current: pool[i] ?? null, next: pool[j] ?? null };
+  const current = pool[i] ?? null;
+  // With a single-job pool, `(i + 1) % 1 === i` would alias `next` to `current`
+  // (the jobs page would show the same job as both spotlighted and "up next").
+  // There is nothing else to rotate to, so there is no "up next" job.
+  const next = pool.length > 1 ? (pool[(i + 1) % pool.length] ?? null) : null;
+  return { current, next };
 }
