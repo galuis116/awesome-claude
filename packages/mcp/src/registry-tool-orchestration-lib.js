@@ -725,7 +725,21 @@ export async function readRegistryResource(args = {}, options = {}) {
     const entries = unwrapEntries(
       await readJsonArtifact("search-index.json", options),
     );
-    payload = buildCategoryResourcePayload(category, entries, toEntrySummary);
+    // Bound the category resource like every other listing surface. Absent
+    // params fall back to DISCOVERY_RESOURCE_LIMIT (normalizeLimit needs
+    // undefined, not the null that URLSearchParams.get returns, to hit its
+    // fallback); normalizeLimit also hard-caps the page at that limit.
+    const offset = normalizeOffset(
+      parsed.searchParams.get("offset") ?? undefined,
+    );
+    const limit = normalizeLimit(
+      parsed.searchParams.get("limit") ?? undefined,
+      DISCOVERY_RESOURCE_LIMIT,
+    );
+    payload = buildCategoryResourcePayload(category, entries, toEntrySummary, {
+      offset,
+      limit,
+    });
   } else if (parsed.hostname === "entry" && parts.length === 2) {
     const [category, slug] = parts.map(normalizeText);
     // Resource reads return the full document; only the tool defaults to a

@@ -575,6 +575,46 @@ describe("registry-handlers-lib response builders", () => {
     );
     expect(payload.total).toBe(1);
   });
+
+  it("buildCategoryResourcePayload paginates and reports the full total", () => {
+    const entries = Array.from({ length: 30 }, (_, index) => ({
+      category: "mcp",
+      slug: `demo-${index}`,
+    }));
+
+    const firstPage = buildCategoryResourcePayload(
+      "mcp",
+      entries,
+      toEntrySummary,
+      { offset: 0, limit: 10 },
+    );
+    expect(firstPage).toMatchObject({
+      total: 30,
+      limit: 10,
+      offset: 0,
+      count: 10,
+    });
+    expect(firstPage.entries).toHaveLength(10);
+
+    const tailPage = buildCategoryResourcePayload(
+      "mcp",
+      entries,
+      toEntrySummary,
+      { offset: 25, limit: 10 },
+    );
+    // Only 5 rows remain past offset 25, but the full total is still reported.
+    expect(tailPage).toMatchObject({ total: 30, offset: 25, count: 5 });
+
+    // With no options the page is capped at DISCOVERY_RESOURCE_LIMIT (bounded).
+    const defaulted = buildCategoryResourcePayload(
+      "mcp",
+      entries,
+      toEntrySummary,
+    );
+    expect(defaulted.limit).toBe(DISCOVERY_RESOURCE_LIMIT);
+    expect(defaulted.count).toBe(DISCOVERY_RESOURCE_LIMIT);
+    expect(defaulted.total).toBe(30);
+  });
   it("buildListRegistryResourcesResponse matrix 0", () => {
     const response = buildListRegistryResourcesResponse({
       manifest: {},

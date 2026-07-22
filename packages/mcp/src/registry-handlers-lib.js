@@ -314,15 +314,19 @@ export function buildCategoryResourcePayload(
   category,
   entries,
   toEntrySummary,
+  { offset = 0, limit = DISCOVERY_RESOURCE_LIMIT } = {},
 ) {
-  const summaries = entries
-    .filter((entry) => entry.category === category)
-    .map(toEntrySummary);
+  const matched = entries.filter((entry) => entry.category === category);
+  const start = Math.max(0, offset);
+  const page = matched.slice(start, start + limit).map(toEntrySummary);
   return {
     ok: true,
     category,
-    total: summaries.length,
-    entries: summaries,
+    total: matched.length,
+    limit,
+    offset: start,
+    count: page.length,
+    entries: page,
   };
 }
 

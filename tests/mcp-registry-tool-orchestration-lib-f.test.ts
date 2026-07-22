@@ -67,6 +67,45 @@ describe("registry-tool-orchestration readRegistryResource uri routing", () => {
     expect(payload.ok).toBe(true);
     expect(payload.category).toBe("mcp");
   });
+
+  const manyCategoryOptions = {
+    readJsonArtifact: async () => ({
+      entries: Array.from({ length: 30 }, (_, index) => ({
+        category: "mcp",
+        slug: `mcp-${index}`,
+        title: `MCP ${index}`,
+      })),
+    }),
+    readTextArtifact: async () => "",
+  };
+
+  it("bounds the category resource with offset/limit query params", async () => {
+    const payload = resourcePayload(
+      await readRegistryResource(
+        { uri: "heyclaude://category/mcp?limit=5&offset=10" },
+        manyCategoryOptions,
+      ),
+    );
+    expect(payload).toMatchObject({
+      total: 30,
+      limit: 5,
+      offset: 10,
+      count: 5,
+    });
+    expect(payload.entries).toHaveLength(5);
+  });
+
+  it("caps the unbounded category resource at the default limit", async () => {
+    const payload = resourcePayload(
+      await readRegistryResource(
+        { uri: "heyclaude://category/mcp" },
+        manyCategoryOptions,
+      ),
+    );
+    expect(payload.total).toBe(30);
+    expect(payload.entries.length).toBeLessThanOrEqual(25);
+    expect(payload.count).toBe(payload.entries.length);
+  });
 });
 
 describe("registry-tool-orchestration getPlatformAdapter", () => {
