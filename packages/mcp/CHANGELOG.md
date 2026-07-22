@@ -1,5 +1,12 @@
 # @heyclaude/mcp Changelog
 
+## [0.12.1](https://github.com/JSONbored/awesome-claude/compare/mcp-v0.12.0...mcp-v0.12.1) (2026-07-22)
+
+
+### Bug Fixes
+
+* **mcp:** bound the category resource with offset/limit pagination ([#5427](https://github.com/JSONbored/awesome-claude/issues/5427)) ([755c08f](https://github.com/JSONbored/awesome-claude/commit/755c08f19107d1a30c04366ffe3b05eb91bed2a7))
+
 ## [0.12.0](https://github.com/JSONbored/awesome-claude/compare/mcp-v0.11.3...mcp-v0.12.0) (2026-07-21)
 
 
