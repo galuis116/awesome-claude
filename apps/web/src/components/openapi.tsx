@@ -34,6 +34,9 @@ export function MethodPill({ method }: { method: OpenApiEndpoint["method"] }) {
 }
 
 export function OpenApiEndpointCard({ endpoint }: { endpoint: OpenApiEndpoint }) {
+  // The request-body editor is owned here so the live-edited body flows into both
+  // the playground textarea and the copyable curl snippet (they render as siblings).
+  const [body, setBody] = useState(endpoint.body?.example ?? "");
   return (
     <article id={endpoint.id} className="scroll-mt-24 rounded-xl border border-border bg-surface">
       <header className="flex flex-wrap items-center gap-3 border-b border-border px-5 py-3">
@@ -96,15 +99,15 @@ export function OpenApiEndpointCard({ endpoint }: { endpoint: OpenApiEndpoint })
               <code>{endpoint.responseExample}</code>
             </pre>
           </div>
-          <CurlBlock endpoint={endpoint} />
+          <CurlBlock endpoint={endpoint} body={body} />
         </div>
-        <OpenApiPlayground endpoint={endpoint} />
+        <OpenApiPlayground endpoint={endpoint} body={body} onBodyChange={setBody} />
       </div>
     </article>
   );
 }
 
-function CurlBlock({ endpoint }: { endpoint: OpenApiEndpoint }) {
+function CurlBlock({ endpoint, body }: { endpoint: OpenApiEndpoint; body?: string }) {
   const base = "https://heyclau.de";
   const params =
     endpoint.parameters
@@ -116,10 +119,13 @@ function CurlBlock({ endpoint }: { endpoint: OpenApiEndpoint }) {
     return ex ?? `:${name}`;
   });
   const fullUrl = `${base}${url}${params ? `?${params}` : ""}`;
+  // Prefer the live-edited body; fall back to the documented example. Editing the
+  // playground's Body textarea now visibly updates this curl payload.
+  const bodyPayload = body ?? endpoint.body?.example ?? "";
   const curl =
     endpoint.method === "GET"
       ? `curl '${fullUrl}'`
-      : `curl -X ${endpoint.method} '${fullUrl}' \\\n  -H 'content-type: application/json' \\\n  -d '${endpoint.body?.example.replace(/\n/g, "") ?? ""}'`;
+      : `curl -X ${endpoint.method} '${fullUrl}' \\\n  -H 'content-type: application/json' \\\n  -d '${bodyPayload.replace(/\n/g, "")}'`;
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
@@ -138,13 +144,25 @@ function CurlBlock({ endpoint }: { endpoint: OpenApiEndpoint }) {
   );
 }
 
-export function OpenApiPlayground({ endpoint }: { endpoint: OpenApiEndpoint }) {
+export function OpenApiPlayground({
+  endpoint,
+  body,
+  onBodyChange,
+}: {
+  endpoint: OpenApiEndpoint;
+  body?: string;
+  onBodyChange?: (next: string) => void;
+}) {
   const [values, setValues] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {};
     endpoint.parameters?.forEach((p) => (init[p.name] = p.example ?? ""));
     return init;
   });
-  const [body, setBody] = useState(endpoint.body?.example ?? "");
+  const [localBody, setLocalBody] = useState(endpoint.body?.example ?? "");
+  // Controlled when a parent owns the body (endpoint card); otherwise self-manage
+  // so the exported component still works standalone.
+  const bodyValue = body ?? localBody;
+  const setBody = onBodyChange ?? setLocalBody;
   const [sending, setSending] = useState(false);
   const [response, setResponse] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -202,7 +220,7 @@ export function OpenApiPlayground({ endpoint }: { endpoint: OpenApiEndpoint }) {
         <div>
           <div className="eyebrow mb-1.5">Body</div>
           <textarea
-            value={body}
+            value={bodyValue}
             onChange={(e) => setBody(e.target.value)}
             rows={6}
             className="w-full rounded-md border border-border bg-background p-3 font-mono text-[11px] text-ink focus:outline-none focus:ring-2 focus:ring-accent/40"
