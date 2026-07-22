@@ -131,6 +131,28 @@ describe("pickDailySpotlight", () => {
     });
   });
 
+  it("has no 'up next' job when exactly one job qualifies", () => {
+    const solo = [
+      job({ slug: "solo", lastVerifiedAt: iso(0), postedAt: iso(1) }),
+    ];
+    expect(pickDailySpotlight(solo, NOW)).toEqual({
+      current: expect.objectContaining({ slug: "solo" }),
+      next: null,
+    });
+  });
+
+  it("never returns next === current for any pool size or day", () => {
+    for (const size of [1, 2, 3, 4]) {
+      const jobs = Array.from({ length: size }, (_, k) =>
+        job({ slug: `j-${k}`, lastVerifiedAt: iso(0), postedAt: iso(1) }),
+      );
+      for (let day = 0; day < size + 2; day += 1) {
+        const { current, next } = pickDailySpotlight(jobs, NOW + day * DAY);
+        if (next) expect(next.slug).not.toBe(current?.slug);
+      }
+    }
+  });
+
   it("rotates deterministically by day: same day → same pick, next day → next", () => {
     const today = pickDailySpotlight(pool, NOW);
     expect(pickDailySpotlight(pool, NOW + DAY - 1)).toEqual(today); // same UTC day slot
