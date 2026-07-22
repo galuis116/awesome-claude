@@ -10,6 +10,7 @@ import { normalizeJobListing } from "@/lib/job-listing-lib";
 import { cn } from "@/lib/utils";
 import { JobCard } from "@/components/job-card";
 import { isFresh, pickDailySpotlight, relativePosted, sortJobs } from "@/lib/jobs-utils";
+import { jobsEmptyStateSuggestions } from "@/lib/jobs-empty-state-lib";
 import { trackEvent } from "@/lib/analytics";
 import {
   jobsErrorRetryAnalyticsData,
@@ -238,6 +239,27 @@ function JobsPage() {
     (slice: Partial<JobsFilterState>) => countJobsForFilters(jobs, { ...filterState, ...slice }),
     [filterState, jobs],
   );
+
+  // Per-filter "relax this to see N roles" suggestions for the zero-result state.
+  // RESET values from the lib are all valid filter values, so the cast is safe.
+  const emptySuggestions = useMemo(
+    () =>
+      hasFilters
+        ? jobsEmptyStateSuggestions(filterState, (slice) =>
+            countForFilters(slice as Partial<JobsFilterState>),
+          )
+        : [],
+    [hasFilters, filterState, countForFilters],
+  );
+
+  const applyFilterPatch = useCallback((patch: Partial<JobsFilterState>) => {
+    if (patch.q !== undefined) setQ(patch.q);
+    if (patch.tier !== undefined) setTier(patch.tier);
+    if (patch.remote !== undefined) setRemote(patch.remote);
+    if (patch.type !== undefined) setType(patch.type);
+    if (patch.freshOnly !== undefined) setFreshOnly(patch.freshOnly);
+    if (patch.featuredOnly !== undefined) setFeaturedOnly(patch.featuredOnly);
+  }, []);
 
   const onFilterSelect = useCallback(
     (
@@ -517,11 +539,39 @@ function JobsPage() {
                 }
               />
             ))}
-            {sorted.length === 0 && (
-              <div className="rounded-xl border border-dashed border-border bg-surface px-5 py-12 text-center text-sm text-ink-muted">
-                {loadingJobs ? "Loading active roles..." : "No roles match these filters."}
-              </div>
-            )}
+            {sorted.length === 0 &&
+              (loadingJobs ? (
+                <div className="rounded-xl border border-dashed border-border bg-surface px-5 py-12 text-center text-sm text-ink-muted">
+                  Loading active roles...
+                </div>
+              ) : hasFilters ? (
+                <div className="space-y-3 rounded-xl border border-dashed border-border bg-surface px-5 py-12 text-center text-sm text-ink-muted">
+                  <p>No roles match these filters.</p>
+                  {emptySuggestions.length > 0 && (
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                      {emptySuggestions.map((s) => (
+                        <button
+                          key={s.axis}
+                          onClick={() => applyFilterPatch(s.patch as Partial<JobsFilterState>)}
+                          className="rounded-full border border-border px-3 py-1 text-xs text-ink transition hover:border-ink-subtle"
+                        >
+                          {s.label} · {s.count} role{s.count === 1 ? "" : "s"}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <button
+                    onClick={onClearFilters}
+                    className="text-xs font-medium text-ink underline underline-offset-4"
+                  >
+                    Clear all filters
+                  </button>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-border bg-surface px-5 py-12 text-center text-sm text-ink-muted">
+                  No roles match these filters.
+                </div>
+              ))}
           </div>
 
           <div className="mt-8">
