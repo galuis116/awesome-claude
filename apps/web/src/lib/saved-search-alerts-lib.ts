@@ -186,12 +186,26 @@ export function buildSavedSearchAlerts(
     const ref = eventRef(event);
     if (!ref || !event.date) continue;
 
-    const entry = entriesByRef.get(ref);
+    const action = eventAction(event);
+    // A removed entry's detail JSON is gone, so `entriesByRef` never has it.
+    // Match "removed" events against the event's own carried fields instead of
+    // requiring a live fetch, so a matching saved search can still surface the
+    // removal. Added/updated events keep needing the live entry (their payload
+    // doesn't carry the fields matching relies on).
+    const liveEntry = entriesByRef.get(ref);
+    const entry: SavedSearchAlertEntry | null =
+      liveEntry ??
+      (action === "removed"
+        ? {
+            category: event.category ?? "",
+            slug: event.slug ?? "",
+            title: event.title ?? "",
+          }
+        : null);
     if (!entry) continue;
 
     for (const search of activeSearches) {
       if (!savedSearchMatchesEntry(search, entry)) continue;
-      const action = eventAction(event);
       const title = event.title || entry.title;
       alerts.push({
         id: `saved-search:${search.id}:${ref}:${event.date}:${action}`,

@@ -314,6 +314,52 @@ describe("buildSavedSearchAlerts", () => {
     ).toEqual([]);
   });
 
+  it("still alerts on a removed event whose entry detail is already gone", () => {
+    // A removed entry's detail JSON 404s, so it's never in entriesByRef; the
+    // match must fall back to the event's own carried fields.
+    const alerts = buildSavedSearchAlerts(
+      [search()],
+      [
+        {
+          id: "evt-removed",
+          kind: "entry",
+          category: "mcp",
+          slug: "postgres-memory",
+          action: "removed",
+          date: "2026-06-19T10:00:00.000Z",
+          title: "Postgres Memory MCP",
+        },
+      ],
+      new Map(),
+    );
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0]).toMatchObject({
+      severity: "warning",
+      title: "Postgres Memory MCP removed",
+      href: "/entry/mcp/postgres-memory",
+    });
+  });
+
+  it("does not fall back for non-removed events with a missing entry", () => {
+    // The fallback is scoped to "removed"; added/updated still need live data.
+    expect(
+      buildSavedSearchAlerts(
+        [search()],
+        [
+          {
+            kind: "entry",
+            category: "mcp",
+            slug: "postgres-memory",
+            action: "added",
+            date: "2026-06-19T10:00:00.000Z",
+            title: "Postgres Memory MCP",
+          },
+        ],
+        new Map(),
+      ),
+    ).toEqual([]);
+  });
+
   it("returns no alerts when no searches are active in-app", () => {
     expect(
       buildSavedSearchAlerts(
