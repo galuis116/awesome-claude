@@ -8,7 +8,7 @@ import {
 describe("riskTone", () => {
   it("maps score bands to blocked / amber / trusted classes", () => {
     expect(riskTone(60)).toContain("text-trust-blocked");
-    expect(riskTone(30)).toContain("text-amber-900");
+    expect(riskTone(30)).toContain("text-trust-review");
     expect(riskTone(29)).toContain("text-trust-trusted");
   });
 });

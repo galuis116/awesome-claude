@@ -134,7 +134,7 @@ export function CompareRolloutReadinessPanel({
                       item.tone === "complete" &&
                         "border-trust-trusted/30 bg-trust-trusted/5 text-trust-trusted",
                       item.tone === "warning" &&
-                        "border-amber-500/30 bg-amber-500/5 text-amber-900",
+                        "border-amber-500/30 bg-amber-500/5 text-trust-review",
                       item.tone === "blocked" &&
                         "border-trust-blocked/30 bg-trust-blocked/5 text-trust-blocked",
                     )}

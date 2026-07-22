@@ -225,7 +225,7 @@ describe("decisionStepToneClass", () => {
 describe("decisionRiskClass", () => {
   it("bands the risk score into chip classes", () => {
     expect(decisionRiskClass(60)).toContain("text-trust-blocked");
-    expect(decisionRiskClass(30)).toContain("text-amber-900");
+    expect(decisionRiskClass(30)).toContain("text-trust-review");
     expect(decisionRiskClass(29)).toContain("text-trust-trusted");
   });
 });

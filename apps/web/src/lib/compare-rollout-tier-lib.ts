@@ -5,5 +5,5 @@
 export function tierClass(tier: "ready" | "review" | "hold"): string {
   if (tier === "ready") return "border-trust-trusted/30 bg-trust-trusted/5 text-trust-trusted";
   if (tier === "hold") return "border-trust-blocked/30 bg-trust-blocked/5 text-trust-blocked";
-  return "border-amber-500/30 bg-amber-500/5 text-amber-900";
+  return "border-amber-500/30 bg-amber-500/5 text-trust-review";
 }

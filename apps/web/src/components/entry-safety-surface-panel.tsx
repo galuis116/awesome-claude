@@ -87,7 +87,7 @@ export function EntrySafetySurfacePanel({
                 active
                   ? "border-accent bg-accent/10 text-ink"
                   : sensitive
-                    ? "border-amber-500/40 bg-amber-500/5 text-amber-900 hover:border-amber-500/60"
+                    ? "border-amber-500/40 bg-amber-500/5 text-trust-review hover:border-amber-500/60"
                     : "border-border bg-background text-ink-muted hover:text-ink",
               )}
             >

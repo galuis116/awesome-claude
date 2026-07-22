@@ -32,7 +32,7 @@ type StatTone = "good" | "watch" | "risk" | "muted";
 
 function toneText(tone: StatTone): string {
   if (tone === "good") return "text-trust-trusted";
-  if (tone === "watch") return "text-amber-900";
+  if (tone === "watch") return "text-trust-review";
   if (tone === "risk") return "text-trust-blocked";
   return "text-ink-muted";
 }

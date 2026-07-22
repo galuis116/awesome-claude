@@ -176,7 +176,7 @@ function summary(entries: MitigationPriorityEntry[]): string {
 
 export function mitigationPriorityTierClass(tier: MitigationPriorityTier): string {
   if (tier === "urgent") return "border-trust-blocked/35 bg-trust-blocked/5 text-trust-blocked";
-  if (tier === "watch") return "border-amber-500/35 bg-amber-500/5 text-amber-900";
+  if (tier === "watch") return "border-amber-500/35 bg-amber-500/5 text-trust-review";
   return "border-trust-trusted/35 bg-trust-trusted/5 text-trust-trusted";
 }
 

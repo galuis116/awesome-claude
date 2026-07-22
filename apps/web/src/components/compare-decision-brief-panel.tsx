@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 const TONE_BADGE: Record<CompareBriefTone, string> = {
   ready: "border-trust-trusted/30 bg-trust-trusted/10 text-trust-trusted",
   review: "border-accent/30 bg-accent/10 text-ink",
-  caution: "border-amber-500/30 bg-amber-500/10 text-amber-900",
+  caution: "border-amber-500/30 bg-amber-500/10 text-trust-review",
   blocked: "border-trust-blocked/30 bg-trust-blocked/10 text-trust-blocked",
 };
 
@@ -68,7 +68,7 @@ export function CompareDecisionBriefPanel({
           <div className="flex items-start gap-2">
             <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-700" aria-hidden />
             <div className="min-w-0">
-              <p className="text-amber-900">
+              <p className="text-trust-review">
                 Divergence detected
                 {state.divergingLabels.length > 0
                   ? ` on ${state.divergingLabels.slice(0, 4).join(", ")}`
@@ -184,7 +184,7 @@ export function CompareDecisionBriefPanel({
               )}
 
               {compact && brief.checklist.some((item) => item.required && !item.done) ? (
-                <div className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[10px] text-amber-900">
+                <div className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[10px] text-trust-review">
                   <AlertTriangle className="h-3 w-3" aria-hidden />
                   Required checks still pending
                 </div>

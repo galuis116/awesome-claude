@@ -6,6 +6,6 @@ describe("tierClass", () => {
   it("maps ready/hold/review to trusted/blocked/amber classes", () => {
     expect(tierClass("ready")).toContain("text-trust-trusted");
     expect(tierClass("hold")).toContain("text-trust-blocked");
-    expect(tierClass("review")).toContain("text-amber-900");
+    expect(tierClass("review")).toContain("text-trust-review");
   });
 });

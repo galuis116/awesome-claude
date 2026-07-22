@@ -167,7 +167,7 @@ export function ComparisonTray() {
               {tray.count}/{tray.maxCount}
             </span>
             {trustDivergenceBadge ? (
-              <span className="rounded-full border border-amber-300/60 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-900">
+              <span className="rounded-full border border-amber-300/60 bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-trust-review">
                 {trustDivergenceBadge}
               </span>
             ) : null}

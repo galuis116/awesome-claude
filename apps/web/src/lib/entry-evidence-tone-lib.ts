@@ -4,7 +4,7 @@
 /** Border/background/text classes for a risk score (higher = worse). */
 export function riskTone(score: number): string {
   if (score >= 60) return "border-trust-blocked/40 bg-trust-blocked/10 text-trust-blocked";
-  if (score >= 30) return "border-amber-500/40 bg-amber-500/10 text-amber-900";
+  if (score >= 30) return "border-amber-500/40 bg-amber-500/10 text-trust-review";
   return "border-trust-trusted/40 bg-trust-trusted/10 text-trust-trusted";
 }
 

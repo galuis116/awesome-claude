@@ -8,7 +8,7 @@ function RiskBadge({ score }: { score: number }) {
     score >= 60
       ? "border-trust-blocked/40 bg-trust-blocked/10 text-trust-blocked"
       : score >= 30
-        ? "border-amber-500/40 bg-amber-500/10 text-amber-900"
+        ? "border-amber-500/40 bg-amber-500/10 text-trust-review"
         : "border-trust-trusted/40 bg-trust-trusted/10 text-trust-trusted";
   return (
     <span

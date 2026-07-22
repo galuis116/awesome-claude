@@ -208,7 +208,7 @@ describe("compare deployment risk map lib", () => {
 describe("deploymentRiskBandClass", () => {
   it("maps each band to its chip classes", () => {
     expect(deploymentRiskBandClass("high")).toContain("text-trust-blocked");
-    expect(deploymentRiskBandClass("medium")).toContain("text-amber-900");
+    expect(deploymentRiskBandClass("medium")).toContain("text-trust-review");
     expect(deploymentRiskBandClass("low")).toContain("text-trust-trusted");
   });
 });

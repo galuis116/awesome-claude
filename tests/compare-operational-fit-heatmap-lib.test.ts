@@ -209,7 +209,7 @@ describe("compare operational fit heatmap lib", () => {
 describe("operationalFitToneClass", () => {
   it("maps each tone to its chip classes", () => {
     expect(operationalFitToneClass("strong")).toContain("text-trust-trusted");
-    expect(operationalFitToneClass("mixed")).toContain("text-amber-900");
+    expect(operationalFitToneClass("mixed")).toContain("text-trust-review");
     expect(operationalFitToneClass("weak")).toContain("text-trust-blocked");
   });
 });
