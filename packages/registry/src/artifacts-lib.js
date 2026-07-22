@@ -912,8 +912,21 @@ export function buildCursorSkillAdapter(entry) {
     .join("\n");
 }
 
+/**
+ * The canonical "copy payload" preview text for a Raycast entry — the same
+ * `title / description / url` shape the extension's client-side fallback
+ * (`buildSearchResultCopyText`) uses, generated server-side so the feed's
+ * `copyText` fields carry real data instead of being permanently `undefined`.
+ */
+export function buildRaycastCopyText(entry) {
+  const description = entry.cardDescription || entry.description || "";
+  return `${entry.title}\n\n${description}\n\n${entryCanonicalUrl(entry)}`;
+}
+
 export function buildRaycastEntries(entries) {
   return entries.map((entry) => {
+    const fullCopyText = buildRaycastCopyText(entry);
+    const copyText = truncateText(fullCopyText, RAYCAST_COPY_PREVIEW_LIMIT);
     return compactDefinedObject({
       category: entry.category,
       slug: entry.slug,
@@ -931,6 +944,9 @@ export function buildRaycastEntries(entries) {
       documentationUrl: entry.documentationUrl || "",
       downloadTrust: entry.downloadTrust,
       verificationStatus: entry.verificationStatus || "",
+      copyText,
+      copyTextLength: fullCopyText.length,
+      copyTextTruncated: fullCopyText.length > RAYCAST_COPY_PREVIEW_LIMIT,
       ...buildCompactInstallFields(entry),
       platformCompatibility:
         entry.category === "skills"
@@ -979,6 +995,7 @@ export function buildRaycastDetail(entry) {
     ...buildEntryProvenanceFields(entry),
     ...buildEntryBrandFields(entry),
     detailMarkdown: buildRaycastDetailMarkdown(entry),
+    copyText: buildRaycastCopyText(entry),
     webUrl: entryCanonicalUrl(entry),
     canonicalUrl: entryCanonicalUrl(entry),
     llmsUrl: `/api/registry/entries/${entry.category}/${entry.slug}/llms`,

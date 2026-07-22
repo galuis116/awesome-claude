@@ -19,6 +19,7 @@ import {
   buildRaycastDetailMarkdown,
   buildRaycastDetail,
   buildRaycastEntries,
+  buildRaycastCopyText,
   buildRaycastEnvelope,
   buildEntryDetail,
   buildCursorSkillAdapter,
@@ -821,6 +822,36 @@ describe("buildRaycastEntries", () => {
     expect(withoutNotes?.trustSignals).toBeUndefined();
     expect(withNotes?.trustSignals).not.toHaveProperty("platforms");
     expect(withNotes?.trustSignals).not.toHaveProperty("supportLevels");
+  });
+
+  it("generates a non-empty copyText preview that respects the cap", () => {
+    const row = buildRaycastEntries([FIXTURE_MCP])[0];
+    const full = buildRaycastCopyText(FIXTURE_MCP);
+    expect(row?.copyText).toBe(full); // short fixture is not truncated
+    expect(row?.copyText.length).toBeLessThanOrEqual(
+      RAYCAST_COPY_PREVIEW_LIMIT + 3,
+    );
+    expect(row?.copyTextLength).toBe(full.length);
+    expect(row?.copyTextTruncated).toBe(false);
+    // The client-fallback shape: title / description / canonical url.
+    expect(full).toContain(FIXTURE_MCP.title);
+    expect(full).toContain(`${SITE_URL}/entry/mcp/demo-server`);
+  });
+
+  it("truncates copyText past the preview limit and flags it, with a longer detail copyText", () => {
+    const longEntry = syntheticEntry("mcp", "long-copy", {
+      // buildRaycastCopyText prefers cardDescription, so make that the long one.
+      cardDescription: "x".repeat(RAYCAST_COPY_PREVIEW_LIMIT + 500),
+    });
+    const row = buildRaycastEntries([longEntry])[0];
+    const detail = buildRaycastDetail(longEntry);
+    expect(row?.copyTextTruncated).toBe(true);
+    expect(row?.copyText.length).toBeLessThanOrEqual(
+      RAYCAST_COPY_PREVIEW_LIMIT,
+    );
+    // Validator invariant: a truncated feed entry must have a longer detail copyText.
+    expect(detail.copyText.length).toBeGreaterThan(row!.copyText.length);
+    expect(detail.copyText).toBe(buildRaycastCopyText(longEntry));
   });
 });
 
