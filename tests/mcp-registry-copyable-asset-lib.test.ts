@@ -2286,6 +2286,52 @@ describe("registry-copyable-asset-lib buildCopyableAssetResponse", () => {
     expect(response.ok).toBe(true);
     expect(response.key).toBe("mcp:browser-bridge");
   });
+
+  it("falls back to commandSyntax for the install command, like sibling tools", () => {
+    // commands-category entries carry their invocation in commandSyntax, not
+    // installCommand — the entry.asset tool must apply the same fallback the
+    // other install-command builders already do.
+    const entry = makeEntry({
+      category: "commands",
+      slug: "review-pr",
+      installCommand: undefined,
+      commandSyntax: "/review-pr --full",
+    });
+    const assets = buildEntryContentAssets(entry);
+    const response = buildCopyableAssetResponse({
+      entry,
+      platform: "",
+      requestedType: "",
+      assets,
+      primary: assets[0] ?? null,
+      compatibility: [],
+      source: sourceSummary(entry),
+      trust: entryTrustSummary(entry),
+      canonicalUrl: entryCanonicalUrl(entry),
+    });
+    expect(response.installCommand).toBe("/review-pr --full");
+  });
+
+  it("prefers installCommand over commandSyntax when both are set", () => {
+    const entry = makeEntry({
+      installCommand: "npx -y browser-bridge",
+      commandSyntax: "/should-not-win",
+    });
+    const assets = buildEntryContentAssets(entry);
+    const response = buildCopyableAssetResponse({
+      entry,
+      platform: "",
+      requestedType: "",
+      assets,
+      primary: assets[0] ?? null,
+      compatibility: [],
+      source: sourceSummary(entry),
+      trust: entryTrustSummary(entry),
+      canonicalUrl: entryCanonicalUrl(entry),
+    });
+    expect(response.installCommand).toBe("npx -y browser-bridge");
+  });
+
   it("buildCopyableAssetResponse churn 0", () => {
     const entry = makeEntry({ slug: "slug-0", body: "body-0" });
     const assets = buildEntryContentAssets(entry);

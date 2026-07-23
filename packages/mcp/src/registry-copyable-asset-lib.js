@@ -107,7 +107,7 @@ export function buildCopyableAssetResponse({
     requestedAssetType: requestedType || "",
     primaryAsset: primary,
     assets,
-    installCommand: entry.installCommand || "",
+    installCommand: entry.installCommand || entry.commandSyntax || "",
     configSnippet: entry.configSnippet || "",
     usageSnippet: entry.usageSnippet || "",
     downloadUrl: entry.downloadUrl || "",
