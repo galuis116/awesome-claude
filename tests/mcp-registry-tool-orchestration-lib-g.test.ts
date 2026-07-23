@@ -97,6 +97,48 @@ describe("registry-tool-orchestration getRecentUpdates", () => {
       (await getRecentUpdates({ since: "2026-01-01" }, artifactOptions)).ok,
     ).toBe(true);
   });
+
+  const mixedPlatformOptions = {
+    readJsonArtifact: async () => ({
+      entries: [
+        {
+          category: "mcp",
+          slug: "cc-server",
+          title: "CC Server",
+          description: "d",
+          tags: [],
+          platforms: ["claude-code"],
+          dateAdded: "2026-05-02",
+        },
+        {
+          category: "mcp",
+          slug: "cursor-server",
+          title: "Cursor Server",
+          description: "d",
+          tags: [],
+          platforms: ["cursor"],
+          dateAdded: "2026-05-01",
+        },
+      ],
+    }),
+    readTextArtifact: async () => "",
+  };
+
+  it("filters recent updates by platform, like registry.search/list", async () => {
+    const result = await getRecentUpdates(
+      { platform: "claude-code" },
+      mixedPlatformOptions,
+    );
+    expect(result.ok).toBe(true);
+    expect(result.platform).toBe("claude-code");
+    expect(result.entries.map((entry) => entry.slug)).toEqual(["cc-server"]);
+  });
+
+  it("returns every platform's updates when no platform is given", async () => {
+    const result = await getRecentUpdates({}, mixedPlatformOptions);
+    expect(result.count).toBe(2);
+    expect(result.platform).toBe("");
+  });
 });
 
 describe("registry-tool-orchestration getRelatedEntries", () => {

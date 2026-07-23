@@ -291,6 +291,9 @@ export const RecentUpdatesInputSchema = z
     category: pathPart
       .optional()
       .describe("Restrict to a single category (e.g. 'mcp', 'hooks')."),
+    platform: platform
+      .optional()
+      .describe("Filter to entries compatible with this platform."),
     since: z
       .string()
       .trim()

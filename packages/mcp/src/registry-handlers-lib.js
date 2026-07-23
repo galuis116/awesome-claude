@@ -131,10 +131,16 @@ export function sortEntriesByUpdatedAt(entries, entryUpdatedAt) {
   });
 }
 
-export function buildRecentUpdatesResponse({ category, since, entries }) {
+export function buildRecentUpdatesResponse({
+  category,
+  platform,
+  since,
+  entries,
+}) {
   return {
     ok: true,
     category: category || "",
+    platform: platform || "",
     since,
     count: entries.length,
     entries,

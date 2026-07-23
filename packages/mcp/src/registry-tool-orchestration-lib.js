@@ -374,12 +374,14 @@ export async function getRecentUpdates(args = {}, options = {}) {
     return invalid("since must be a parseable date such as 2026-05-01.");
   }
   const limit = normalizeLimit(args.limit, 10);
+  const platform = normalizePlatform(args.platform);
   const searchIndex = unwrapEntries(
     await readJsonArtifact("search-index.json", options),
   );
   const sorted = sortEntriesByUpdatedAt(
     searchIndex
       .filter((entry) => !category || entry.category === category)
+      .filter((entry) => entryMatchesPlatform(entry, platform))
       .filter((entry) => !since || entryUpdatedAt(entry) >= since),
     entryUpdatedAt,
   );
@@ -389,7 +391,7 @@ export async function getRecentUpdates(args = {}, options = {}) {
     entryUpdatedAt,
   );
 
-  return buildRecentUpdatesResponse({ category, since, entries });
+  return buildRecentUpdatesResponse({ category, platform, since, entries });
 }
 
 export async function getRelatedEntries(args = {}, options = {}) {
