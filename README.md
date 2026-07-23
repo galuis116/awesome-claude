@@ -12,7 +12,7 @@
         templates, and statuslines.
       </p>
       <p>
-        <strong>1384+ file-backed entries</strong> stay useful as both an
+        <strong>1385+ file-backed entries</strong> stay useful as both an
         awesome-list catalog and a machine-readable registry for builders.
       </p>
       <p>
@@ -36,7 +36,7 @@
       <h3>Registry snapshot</h3>
       <table>
         <tr>
-          <td align="center"><strong>1384</strong><br><sub>entries</sub></td>
+          <td align="center"><strong>1385</strong><br><sub>entries</sub></td>
           <td align="center"><strong>10</strong><br><sub>sections</sub></td>
           <td align="center"><strong>AI-reviewed</strong><br><sub>merge gate</sub></td>
         </tr>
@@ -79,7 +79,7 @@ Refreshed weekly by [`.github/workflows/gittensor-impact.yml`](.github/workflows
         </td>
 <td align="center" width="20%">
           <a href="#mcp-servers"><strong>🔌 MCP Servers</strong></a><br>
-          <code>481</code><br>
+          <code>482</code><br>
           <sub>Model Context Protocol servers and integrations.</sub>
         </td>
 <td align="center" width="20%">
@@ -307,7 +307,7 @@ packages use checksums and package trust metadata after review.
 - **[Web Async Agent Coordinator - Agents](https://heyclau.de/entry/agents/web-async-agent-coordinator)** - System-prompt agent that helps you drive Claude Code on the web: submitting long-running coding tasks to Anthropic's cloud, running independent sessions in parallel, linking GitHub repositories, tracking progress, and turning finished work into pull requests from the browser.
 - **[Zero Data Retention Compliance Agent](https://heyclau.de/entry/agents/zero-data-retention-compliance-agent)** - Community reusable agent prompt for mapping Claude Code deployments to zero data retention requirements using official ZDR docs: logging boundaries, MCP data flows, session storage, and compliance evidence checklists for security review.
 
-## 🔌 MCP Servers (481)
+## 🔌 MCP Servers (482)
 
 - **[Ableton MCP Extended](https://heyclau.de/entry/mcp/ableton-mcp-extended)** - Source-install MCP server for controlling Ableton Live from Claude, including session inspection, track and clip creation, MIDI note editing, tempo and transport control, browser item loading, arrangement workflows, device parameters, automation, external plugins, audio imports, and optional ElevenLabs.
 - **[ABMeter MCP Server](https://heyclau.de/entry/mcp/abmeter-mcp-server)** - ABMeter MCP exposes experimentation and analytics tooling over streamable HTTP for MCP clients.
@@ -622,6 +622,7 @@ packages use checksums and package trust metadata after review.
 - **[Memory Bank MCP Server](https://heyclau.de/entry/mcp/memory-bank-mcp-server)** - MCP server for remote project memory-bank management, with multi-project directories, file listing, read/write/update tools, and path isolation.
 - **[Memory MCP Server for Claude](https://heyclau.de/entry/mcp/memory-mcp-server)** - Official reference MCP server that gives Claude persistent memory through a local knowledge graph of entities, relations, and observations, stored in a file on your own machine.
 - **[Metabase MCP Server for Claude](https://heyclau.de/entry/mcp/metabase-mcp-server)** - Query and explore your Metabase instance from Claude — list dashboards and cards, retrieve and execute saved questions, run SQL queries, export large result sets, and search across all Metabase resources — with the Metabase MCP server optimized for 90% token reduction.
+- **[Metagraphed MCP Server for Claude](https://heyclau.de/entry/mcp/metagraphed-mcp)** - Public Streamable-HTTP MCP server for the Metagraphed Bittensor subnet integration registry — discover subnets, check health and economics, read metagraph data, and look up accounts or API surfaces without wallets or signing.
 - **[MetaMCP Gateway](https://heyclau.de/entry/mcp/metamcp-gateway)** - Docker-deployed MCP gateway that aggregates downstream MCP servers into namespaces, endpoints, SSE, Streamable HTTP, OpenAPI, auth, and rate limits.
 - **[Microsandbox MCP Server for Claude](https://heyclau.de/entry/mcp/microsandbox-mcp-server)** - Connect Claude to Microsandbox microVMs for sandbox lifecycle, command execution, filesystem, volume, and metrics workflows.
 - **[Microsoft Learn MCP Server](https://heyclau.de/entry/mcp/microsoft-learn-mcp-server)** - Official Microsoft Learn remote MCP server that gives AI agents real-time access to Microsoft documentation search, page fetch, and code sample search.
