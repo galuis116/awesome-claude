@@ -5,6 +5,7 @@ import {
   TOOLS_LISTING_FLOW_URL,
 } from "./submission-classification.js";
 import { parseSafeFrontmatter } from "./frontmatter.js";
+import { SHELL_TOKENS } from "./command-safety-lib.js";
 import {
   isPublicGitHubProfileUrl,
   isPublicHttpUrl,
@@ -14,6 +15,15 @@ import {
 
 export const SUBMISSION_RISK_SCHEMA_VERSION = 1;
 export const SUBMISSION_RISK_COMMENT_MARKER = "<!-- submission-risk-report -->";
+
+// Downloader piped straight into a shell (e.g. `curl … | zsh`). The receiving
+// shell names are sourced from command-safety-lib.js's SHELL_TOKENS so this
+// detector and that sibling check can't drift out of sync (zsh has been macOS's
+// default since 2019, so `| zsh` is a realistic real-world installer).
+const CURL_PIPE_TO_SHELL_RE = new RegExp(
+  `\\b(curl|wget)\\b[\\s\\S]{0,120}\\|[\\s\\S]{0,40}\\b(sudo\\s+)?(${SHELL_TOKENS.join("|")})\\b`,
+  "i",
+);
 
 const SEVERITY_WEIGHT = {
   info: 0,
@@ -1252,9 +1262,7 @@ function addContentRiskSignals(report, fields, text) {
 
   if (
     referencesDestructiveRootRemoval(installText) ||
-    /\b(curl|wget)\b[\s\S]{0,120}\|[\s\S]{0,40}\b(sudo\s+)?(sh|bash)\b/i.test(
-      installText,
-    ) ||
+    CURL_PIPE_TO_SHELL_RE.test(installText) ||
     /\b(invoke-expression|iex)\b/i.test(installText) ||
     /\bbase64\s+(-d|--decode)\b[\s\S]{0,80}\|[\s\S]{0,40}\b(sh|bash)\b/i.test(
       installText,
